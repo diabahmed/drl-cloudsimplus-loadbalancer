@@ -24,6 +24,7 @@ dependencies {
     // The production code uses the SLF4J logging API at compile time
     implementation 'org.slf4j:slf4j-api:2.0.17'
     implementation 'org.cloudsimplus:cloudsimplus:8.5.5'
+    implementation 'com.typesafe:config:1.4.3'
     implementation group: 'net.sf.py4j', name: 'py4j', version: '0.10.9.9'
     implementation group: "ch.qos.logback", name: "logback-classic", version: "1.5.18"
     implementation group: 'org.apache.commons', name: 'commons-collections4', version: '4.5.0-M3'
