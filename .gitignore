@@ -111,6 +111,7 @@ cython_debug/
 .DS_Store
 
 # Logs directory (keep the directory itself)
+logs/
 logs/*
 !logs/.gitkeep
 
