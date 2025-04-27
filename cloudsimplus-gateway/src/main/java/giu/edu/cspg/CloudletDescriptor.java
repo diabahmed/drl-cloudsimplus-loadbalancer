@@ -8,29 +8,29 @@ import org.cloudsimplus.util.DataCloudTags;
 import org.cloudsimplus.utilizationmodels.UtilizationModelFull;
 
 public class CloudletDescriptor {
-    private final int jobId;
+    private final int cloudletId;
     private final long submissionDelay;
     private final long mi;
     private final int numberOfCores;
     private int runTime = 1;
 
-    public CloudletDescriptor(int jobId, long submissionDelay, long mi, int numberOfCores) {
-        this.jobId = jobId;
+    public CloudletDescriptor(int cloudletId, long submissionDelay, long mi, int numberOfCores) {
+        this.cloudletId = cloudletId;
         this.submissionDelay = submissionDelay;
         this.mi = mi;
         this.numberOfCores = numberOfCores;
     }
 
-    public CloudletDescriptor(int jobId, long submissionDelay, long mi, int numberOfCores, int runTime) {
-        this.jobId = jobId;
+    public CloudletDescriptor(int cloudletId, long submissionDelay, long mi, int numberOfCores, int runTime) {
+        this.cloudletId = cloudletId;
         this.submissionDelay = submissionDelay;
         this.mi = mi;
         this.numberOfCores = numberOfCores;
         this.runTime = runTime;
     }
 
-    public int getJobId() {
-        return jobId;
+    public int getCloudletId() {
+        return cloudletId;
     }
 
     public long getSubmissionDelay() {
@@ -56,7 +56,7 @@ public class CloudletDescriptor {
         if (o == null || getClass() != o.getClass())
             return false;
         CloudletDescriptor that = (CloudletDescriptor) o;
-        return getJobId() == that.getJobId() &&
+        return getCloudletId() == that.getCloudletId() &&
                 getSubmissionDelay() == that.getSubmissionDelay() &&
                 getMi() == that.getMi() &&
                 getNumberOfCores() == that.getNumberOfCores() &&
@@ -65,13 +65,13 @@ public class CloudletDescriptor {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getJobId(), getSubmissionDelay(), getMi(), getNumberOfCores(), getRuntime());
+        return Objects.hash(getCloudletId(), getSubmissionDelay(), getMi(), getNumberOfCores(), getRuntime());
     }
 
     @Override
     public String toString() {
         return "CloudletDescriptor{" +
-                "jobId=" + jobId +
+                "cloudletId=" + cloudletId +
                 ", submissionDelay=" + submissionDelay +
                 ", mi=" + mi +
                 ", numberOfCores=" + numberOfCores +
@@ -80,7 +80,7 @@ public class CloudletDescriptor {
     }
 
     public Cloudlet toCloudlet() {
-        Cloudlet cloudlet = new CloudletSimple(jobId, mi * runTime, numberOfCores)
+        Cloudlet cloudlet = new CloudletSimple(cloudletId, mi * runTime, numberOfCores)
                 .setFileSize(DataCloudTags.DEFAULT_MTU)
                 .setOutputSize(DataCloudTags.DEFAULT_MTU)
                 .setUtilizationModel(new UtilizationModelFull());

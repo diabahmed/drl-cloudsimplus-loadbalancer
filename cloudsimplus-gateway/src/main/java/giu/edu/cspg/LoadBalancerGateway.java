@@ -515,15 +515,15 @@ public class LoadBalancerGateway {
 
             for (int v = 0; v < vmCount; v++) {
                 int vmPes = obs[idx++];
-                int jobCount = obs[idx++];
+                int cloudletCount = obs[idx++];
                 sb.append(String.format("      VM[%d]: PEs=%d  Cloudlets=%d\n",
-                        v, vmPes, jobCount));
+                        v, vmPes, cloudletCount));
 
-                for (int j = 0; j < jobCount; j++) {
-                    int jobPes = obs[idx++];
+                for (int j = 0; j < cloudletCount; j++) {
+                    int cloudletPes = obs[idx++];
                     idx++; // skip the “0” child-count
                     sb.append(String.format("        Cloudlet[%d]: PEs=%d\n",
-                            j, jobPes));
+                            j, cloudletPes));
                 }
             }
         }
@@ -541,7 +541,8 @@ public class LoadBalancerGateway {
         treeList.add((int) simulationCore.getTotalHostCores());
         treeList.add(hostsNum);
 
-        // 4) For each host, record its cores & VM count, then each VM, then each job
+        // 4) For each host, record its cores & VM count, then each VM, then each
+        // cloudlet
         for (Host host : hosts) {
             List<Vm> vmList = host.getVmList();
             treeList.add((int) host.getPesNumber());
@@ -549,13 +550,13 @@ public class LoadBalancerGateway {
 
             for (Vm vm : vmList) {
                 if (vm != null && vm.isCreated() && !vm.isFailed()) {
-                    List<Cloudlet> jobList = vm.getCloudletScheduler().getCloudletList();
+                    List<Cloudlet> cloudletList = vm.getCloudletScheduler().getCloudletList();
                     treeList.add((int) vm.getPesNumber());
-                    treeList.add(jobList.size());
+                    treeList.add(cloudletList.size());
 
-                    for (Cloudlet job : jobList) {
-                        treeList.add((int) job.getPesNumber());
-                        treeList.add(0); // jobs have no children
+                    for (Cloudlet cloudlet : cloudletList) {
+                        treeList.add((int) cloudlet.getPesNumber());
+                        treeList.add(0); // cloudlets have no children
                     }
                 }
             }

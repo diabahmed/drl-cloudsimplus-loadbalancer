@@ -251,12 +251,12 @@ public final class SimulationCore {
     }
 
     /**
-     * Logs various statistics about the jobs and VMs in the simulation.
+     * Logs various statistics about the cloudlets and VMs in the simulation.
      * <ul>
      * <li>Total number of VMs created.</li>
      * <li>Number of VMs currently running.</li>
-     * <li>Total number of jobs.</li>
-     * <li>Count of jobs by their status.</li>
+     * <li>Total number of cloudlets.</li>
+     * <li>Count of cloudlets by their status.</li>
      * </ul>
      */
     public void printStats() {
@@ -268,7 +268,7 @@ public final class SimulationCore {
         // statistics.
         final double startTime = getClock() - settings.getSimulationTimestep();
 
-        LOGGER.info("[{} - {}]: All jobs: {} ", startTime, getClock(), cloudletList.size());
+        LOGGER.info("[{} - {}]: All cloudlets: {} ", startTime, getClock(), cloudletList.size());
         Map<Cloudlet.Status, Integer> countByStatus = new HashMap<>();
         for (Cloudlet c : cloudletList) {
             final Cloudlet.Status status = c.getStatus();
