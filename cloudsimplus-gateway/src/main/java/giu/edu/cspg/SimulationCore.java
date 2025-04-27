@@ -4,16 +4,19 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.cloudsimplus.cloudlets.Cloudlet;
 import org.cloudsimplus.core.CloudSimPlus;
 import org.cloudsimplus.core.CloudSimTag;
 import org.cloudsimplus.datacenters.Datacenter;
 import org.cloudsimplus.hosts.Host;
-import org.cloudsimplus.traces.SwfWorkloadFileReader;
 import org.cloudsimplus.vms.Vm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import giu.edu.cspg.utils.WorkloadFileReader;
 
 public final class SimulationCore {
     private static final Logger LOGGER = LoggerFactory.getLogger(SimulationCore.class.getSimpleName());
@@ -57,40 +60,55 @@ public final class SimulationCore {
         vmPool = new ArrayList<>(); // Start with empty pool for initial fleet creation
         cloudletList = new ArrayList<>();
 
-        // --- Step 1: Load Cloudlets from SWF or CSV trace file ---
-        if (settings.getWorkloadMode().equalsIgnoreCase("SWF")) {
-            loadCloudletsFromSwf();
-        } else if (settings.getWorkloadMode().equalsIgnoreCase("CSV")) {
-            LOGGER.warn("CSV workload mode is not implemented yet. Please use SWF mode.");
-            throw new UnsupportedOperationException("CSV workload mode is not implemented yet.");
+        // --- Step 1: Load Cloudlet Descriptors using WorkloadFileReader ---
+        List<CloudletDescriptor> descriptors = loadCloudletDescriptors();
+        LOGGER.info("Loaded and processed {} cloudlet descriptors from trace.", descriptors.size());
+
+        // --- Step 2: Optionally Split Descriptors ---
+        if (settings.isSplitLargeCloudlets()) {
+            LOGGER.info("Splitting large cloudlets (maxCloudletPes = {})...", settings.getMaxCloudletPes());
+            descriptors = splitLargeCloudletDescriptors(descriptors, settings.getMaxCloudletPes());
+            LOGGER.info("Total descriptors after splitting: {}", descriptors.size());
         } else {
-            LOGGER.error("Invalid workload mode: {}", settings.getWorkloadMode());
-            throw new IllegalArgumentException("Invalid workload mode: " + settings.getWorkloadMode());
+            LOGGER.info("Cloudlet splitting disabled.");
         }
 
-        // Initialize broker
-        broker = new LoadBalancingBroker(simulation, cloudletList);
+        // --- Step 3: Convert Descriptors to Cloudlets ---
+        // Convert descriptors to actual Cloudlet objects, associating with the broker
+        this.cloudletList = descriptors.stream()
+                .map(CloudletDescriptor::toCloudlet)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        LOGGER.info("Converted {} descriptors to Cloudlet objects.", this.cloudletList.size());
+
+        // --- Step 4: Create Broker ---
+        broker = new LoadBalancingBroker(simulation, this.cloudletList);
         broker.setShutdownWhenIdle(false); // important to keep the broker running
 
-        // --- Step 2: Create Hosts and Datacenter ---
+        // --- Step 5: Create Hosts and Datacenter ---
         // DatacenterSetup.createDatacenter creates the fixed number of hosts
         // Use VmAllocationPolicyCustom for future dynamic VM creation by agent
         datacenter = DatacenterSetup.createDatacenter(simulation, settings, this.hostList,
                 new VmAllocationPolicyCustom());
         LOGGER.info("Datacenter created with {} hosts.", hostList.size());
 
-        // --- Step 3: Create Initial VM Fleet ---
+        // --- Step 6: Create Initial VM Fleet ---
         DatacenterSetup.createInitialVmFleet(settings, this.vmPool); // Populates vmPool
         LOGGER.info("Initial VM fleet created with {} VMs.", vmPool.size());
 
-        // --- Step 4: Submit the Initial VM Fleet to the broker ---
+        // --- Step 7: Submit the Initial VM Fleet to the broker ---
         // Broker needs to know about these VMs for placement and tracking
         broker.submitVmList(new ArrayList<>(vmPool)); // Submit a copy
+
+        // --- Step 8: Associate cloudlets with the broker ---
+        this.cloudletList.forEach(cloudlet -> {
+            cloudlet.setBroker(broker);
+        });
 
         // This is important to ensure the broker knows about the cloudlets
         ensureAllCloudletsCompleteBeforeSimulationEnds();
 
-        // --- Step 5: Start the simulation engine ---
+        // --- Step 9: Start the simulation engine ---
         simulation.startSync();
         // initialize the simulation to allow the datacenter to be created
         proceedClockTo(settings.getMinTimeBetweenEvents());
@@ -100,29 +118,79 @@ public final class SimulationCore {
     }
 
     /**
-     * Loads cloudlets using SwfWorkloadFileReader and associates them with the
-     * broker.
-     * (This method populates this.cloudletList)
+     * Loads cloudlet descriptors using the appropriate reader based on settings.
      */
-    private void loadCloudletsFromSwf() {
+    private List<CloudletDescriptor> loadCloudletDescriptors() {
         String filePath = settings.getCloudletTraceFile();
-        int referenceMips = settings.getWorkloadReaderMips();
-        int maxCloudletsToCreateFromWorkloadFile = settings.getMaxCloudletsToCreateFromWorkloadFile();
+        String mode = settings.getWorkloadMode();
+        int mips = settings.getWorkloadReaderMips(); // Needed for SWF
+        int maxLines = settings.getMaxCloudletsToCreateFromWorkloadFile();
 
-        LOGGER.info("Loading cloudlet trace from SWF file: {} using MIPS reference: {}", filePath, referenceMips);
+        LOGGER.info("Loading cloudlet descriptors trace from file: {} using MIPS reference: {}", filePath, mips);
         try {
-            SwfWorkloadFileReader reader = new SwfWorkloadFileReader(filePath, referenceMips);
-            reader.setMaxLinesToRead(maxCloudletsToCreateFromWorkloadFile);
-            this.cloudletList = reader.generateWorkload();
-            LOGGER.info("Loaded and processed {} cloudlets from trace.", cloudletList.size());
-
-        } catch (IllegalArgumentException e) {
-            LOGGER.error("Invalid argument for SWF Reader (e.g., MIPS <= 0 or invalid path): {}", e.getMessage());
-            throw e;
-        } catch (Exception e) {
-            LOGGER.error("Error processing SWF trace file: {}", filePath, e);
-            throw new RuntimeException("Failed to load or process SWF trace: " + filePath, e);
+            WorkloadFileReader reader = new WorkloadFileReader(filePath, mode, mips);
+            reader.setMaxLinesToRead(maxLines);
+            return reader.generateDescriptors();
+        } catch (RuntimeException e) {
+            LOGGER.error("Fatal error reading workload file {}: {}", filePath, e.getMessage(), e);
+            // Rethrow or handle as appropriate (e.g., return empty list if non-fatal)
+            throw new RuntimeException("Failed to load workload from " + filePath, e);
         }
+    }
+
+    /**
+     * Splits CloudletDescriptors requiring more PEs than maxCloudletPes into
+     * multiple smaller descriptors.
+     *
+     * @param originalDescriptors The initial list of descriptors.
+     * @param maxCloudletPes      The maximum number of PEs allowed per resulting
+     *                            descriptor.
+     * @return A new list containing the original descriptors (if PEs <=
+     *         maxCloudletPes) and potentially
+     *         multiple split descriptors for larger cloudlets.
+     */
+    private List<CloudletDescriptor> splitLargeCloudletDescriptors(final List<CloudletDescriptor> originalDescriptors,
+            final int maxCloudletPes) {
+        List<CloudletDescriptor> splitList = new ArrayList<>();
+        // Use a high starting point for split IDs to avoid collision with original IDs
+        int nextSplitId = originalDescriptors.stream().mapToInt(CloudletDescriptor::getCloudletId).max().orElse(0)
+                + 1000000;
+
+        for (CloudletDescriptor originalDesc : originalDescriptors) {
+            int originalPes = originalDesc.getNumberOfCores();
+
+            if (originalPes <= maxCloudletPes) {
+                // No need to split, add the original directly
+                splitList.add(originalDesc);
+            } else {
+                // Need to split
+                long totalMi = originalDesc.getMi();
+                int remainingPes = originalPes;
+                long miPerOriginalPe = (totalMi > 0 && originalPes > 0) ? totalMi / originalPes : 1;
+
+                LOGGER.debug("Splitting Cloudlet ID {}: PEs={}, MI={}, maxCloudletPes={}",
+                        originalDesc.getCloudletId(), originalPes, totalMi, maxCloudletPes);
+
+                while (remainingPes > 0) {
+                    int pesForThisSplit = Math.min(remainingPes, maxCloudletPes);
+                    // Distribute MI proportionally to the PEs allocated to this split part
+                    long miForThisSplit = Math.max(1, miPerOriginalPe * pesForThisSplit);
+
+                    CloudletDescriptor splitDesc = new CloudletDescriptor(
+                            nextSplitId++,
+                            originalDesc.getSubmissionDelay(),
+                            miForThisSplit,
+                            pesForThisSplit);
+
+                    splitList.add(splitDesc);
+                    remainingPes -= pesForThisSplit;
+
+                    LOGGER.trace("  -> Created split part: ID={}, PEs={}, MI={}",
+                            splitDesc.getCloudletId(), pesForThisSplit, miForThisSplit);
+                }
+            }
+        }
+        return splitList;
     }
 
     /**
@@ -268,7 +336,7 @@ public final class SimulationCore {
         // statistics.
         final double startTime = getClock() - settings.getSimulationTimestep();
 
-        LOGGER.info("[{} - {}]: All cloudlets: {} ", startTime, getClock(), cloudletList.size());
+        LOGGER.info("[{} - {}]: All Cloudlets: {} ", startTime, getClock(), cloudletList.size());
         Map<Cloudlet.Status, Integer> countByStatus = new HashMap<>();
         for (Cloudlet c : cloudletList) {
             final Cloudlet.Status status = c.getStatus();

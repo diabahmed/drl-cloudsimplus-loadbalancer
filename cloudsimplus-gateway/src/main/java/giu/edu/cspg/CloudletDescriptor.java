@@ -12,21 +12,12 @@ public class CloudletDescriptor {
     private final long submissionDelay;
     private final long mi;
     private final int numberOfCores;
-    private int runTime = 1;
 
     public CloudletDescriptor(int cloudletId, long submissionDelay, long mi, int numberOfCores) {
         this.cloudletId = cloudletId;
         this.submissionDelay = submissionDelay;
         this.mi = mi;
         this.numberOfCores = numberOfCores;
-    }
-
-    public CloudletDescriptor(int cloudletId, long submissionDelay, long mi, int numberOfCores, int runTime) {
-        this.cloudletId = cloudletId;
-        this.submissionDelay = submissionDelay;
-        this.mi = mi;
-        this.numberOfCores = numberOfCores;
-        this.runTime = runTime;
     }
 
     public int getCloudletId() {
@@ -45,10 +36,6 @@ public class CloudletDescriptor {
         return numberOfCores;
     }
 
-    public int getRuntime() {
-        return runTime;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o)
@@ -59,13 +46,12 @@ public class CloudletDescriptor {
         return getCloudletId() == that.getCloudletId() &&
                 getSubmissionDelay() == that.getSubmissionDelay() &&
                 getMi() == that.getMi() &&
-                getNumberOfCores() == that.getNumberOfCores() &&
-                getRuntime() == that.getRuntime();
+                getNumberOfCores() == that.getNumberOfCores();
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getCloudletId(), getSubmissionDelay(), getMi(), getNumberOfCores(), getRuntime());
+        return Objects.hash(getCloudletId(), getSubmissionDelay(), getMi(), getNumberOfCores());
     }
 
     @Override
@@ -75,12 +61,11 @@ public class CloudletDescriptor {
                 ", submissionDelay=" + submissionDelay +
                 ", mi=" + mi +
                 ", numberOfCores=" + numberOfCores +
-                ", runTime=" + runTime +
                 '}';
     }
 
     public Cloudlet toCloudlet() {
-        Cloudlet cloudlet = new CloudletSimple(cloudletId, mi * runTime, numberOfCores)
+        Cloudlet cloudlet = new CloudletSimple(cloudletId, mi, numberOfCores)
                 .setFileSize(DataCloudTags.DEFAULT_MTU)
                 .setOutputSize(DataCloudTags.DEFAULT_MTU)
                 .setUtilizationModel(new UtilizationModelFull());

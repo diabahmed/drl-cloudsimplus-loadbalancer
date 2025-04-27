@@ -109,18 +109,18 @@ def pretty_print_infrastructure(obs: list):
 # --- Simulation Parameters ---
 # These should ideally match defaults or values you'd put in config.yml
 sim_params = {
-    "simulation_name": "test1",
+    "simulation_name": "test1_csv",
 
-    "hosts_count": 2,
-    "host_pes": 100000,
+    "hosts_count": 8,
+    "host_pes": 16,
     "host_pe_mips": 50000, # 50k MIPS per PE
     "host_ram": 65536, # 64 GB
     "host_bw": 50000, # 50 Gbps
-    "host_storage": 1000000, # 1 TB
+    "host_storage": 100000, # 1 TB
 
-    "small_vm_pes": 10000,
+    "small_vm_pes": 2,
     "small_vm_ram": 8192, # 8 GB
-    "small_vm_bw": 2000,
+    "small_vm_bw": 1000,
     "small_vm_storage": 4000, # 4 GB
 
     "medium_vm_multiplier": 2, # -> 4 PEs
@@ -130,8 +130,8 @@ sim_params = {
     "initial_m_vm_count": 1,
     "initial_l_vm_count": 1,
 
-    "workload_mode": "SWF",
-    "cloudlet_trace_file": "traces/LLNL-Atlas-2006-2.1-cln-test.swf",
+    "workload_mode": "CSV",
+    "cloudlet_trace_file": "traces/hill_max30.csv",
     "workload_reader_mips": 8000, # Should match Host MIPS usually
 
     "simulation_timestep": 1.0, # RL step duration
@@ -164,7 +164,7 @@ try:
 
     # 2. Reset Simulation
     logger.info("\nResetting simulation...")
-    seed = 12345
+    seed = 4567
     reset_result_java = gateway_entry_point.reset(seed)
     initial_obs_state_java = reset_result_java.getObservation()
     initial_info_java = reset_result_java.getInfo()

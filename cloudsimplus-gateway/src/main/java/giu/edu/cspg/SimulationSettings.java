@@ -45,6 +45,8 @@ public class SimulationSettings {
     private final String cloudletTraceFile; // Path for trace file
     private final int maxCloudletsToCreateFromWorkloadFile; // Limit for SWF mode
     private final int workloadReaderMips; // MIPS ref for SWF runtime calculation
+    private final boolean splitLargeCloudlets;
+    private final int maxCloudletPes;
 
     private final double simulationTimestep; // RL agent step interval
     private final double minTimeBetweenEvents; // CloudSim internal granularity
@@ -85,7 +87,7 @@ public class SimulationSettings {
         this.hostStorage = getLongParam(params, "host_storage", 1000000); // 1 TB
 
         // Base (Small) VM Configuration
-        this.smallVmPes = getIntParam(params, "small_vm_pes", 2); // e.g., m5a.large
+        this.smallVmPes = getIntParam(params, "small_vm_pes", 2); // e.g., AWS m5a.large
         this.smallVmRam = getLongParam(params, "small_vm_ram", 8192); // 8 GB
         this.smallVmBw = getLongParam(params, "small_vm_bw", 1000); // 1 Gbps - adjust as needed
         this.smallVmStorage = getLongParam(params, "small_vm_storage", 20000); // 20 GB
@@ -101,13 +103,17 @@ public class SimulationSettings {
         this.initialVmCounts = new int[] { this.initialSVmCount, this.initialMVmCount, this.initialLVmCount };
 
         // Workload Configuration
-        this.workloadMode = getStringParam(params, "workload_mode", "SWF"); // Default to SWF
+        this.workloadMode = getStringParam(params, "workload_mode", "SWF");
         this.cloudletTraceFile = getStringParam(params, "cloudlet_trace_file",
-                "traces/LLNL-Atlas-2006-2.1-cln-test.swf"); // Provide a default trace
+                "traces/LLNL-Atlas-2006-2.1-cln-test.swf");
         this.maxCloudletsToCreateFromWorkloadFile = getIntParam(params, "max_cloudlets_to_create_from_workload_file",
-                Integer.MAX_VALUE); // No limit by default
-        this.workloadReaderMips = getIntParam(params, "workload_reader_mips", (int) this.hostPeMips); // Default to host
-                                                                                                      // MIPS
+                Integer.MAX_VALUE);
+        this.workloadReaderMips = getIntParam(params, "workload_reader_mips", (int) this.hostPeMips);
+
+        this.splitLargeCloudlets = getBoolParam(params, "split_large_cloudlets", true);
+        // Default maxCloudletPes to the largest VM's PE count if not specified
+        int defaultMaxCloudletPes = this.smallVmPes * this.largeVmMultiplier;
+        this.maxCloudletPes = getIntParam(params, "max_cloudlet_pes", defaultMaxCloudletPes);
 
         // Simulation Control
         this.simulationTimestep = getDoubleParam(params, "simulation_timestep", 1.0); // e.g., 1 second RL step
@@ -116,12 +122,12 @@ public class SimulationSettings {
                                                                                     // episode
 
         // VM Control
-        this.vmStartupDelay = getDoubleParam(params, "vm_startup_delay", 56.0); // assuming average startup delay is 56s
-                                                                                // as in 10.48550/arXiv.2107.03467
-        this.vmShutdownDelay = getDoubleParam(params, "vm_shutdown_delay", 10.0); // delay before destroying idle VM
+        // assuming average startup delay is 56s as in 10.48550/arXiv.2107.03467
+        this.vmStartupDelay = getDoubleParam(params, "vm_startup_delay", 56.0);
+        this.vmShutdownDelay = getDoubleParam(params, "vm_shutdown_delay", 10.0);
 
         // Costing
-        this.smallVmHourlyCost = getDoubleParam(params, "small_vm_hourly_cost", 0.086); // Example m5a.large cost
+        this.smallVmHourlyCost = getDoubleParam(params, "small_vm_hourly_cost", 0.086);
         this.payingForTheFullHour = getBoolParam(params, "paying_for_the_full_hour", false);
 
         // RL Control
@@ -132,8 +138,7 @@ public class SimulationSettings {
         this.rewardUnutilizationCoef = getDoubleParam(params, "reward_unutilization_coef", 0.85);
         this.rewardCostCoef = getDoubleParam(params, "reward_cost_coef", 0.5);
         this.rewardQueuePenaltyCoef = getDoubleParam(params, "reward_queue_penalty_coef", 0.05);
-        this.rewardInvalidActionCoef = getDoubleParam(params, "reward_invalid_action_coef", 1.0); // Penalty for invalid
-                                                                                                  // action
+        this.rewardInvalidActionCoef = getDoubleParam(params, "reward_invalid_action_coef", 1.0);
 
         LOGGER.info("SimulationSettings loaded successfully.");
     }
@@ -160,6 +165,8 @@ public class SimulationSettings {
                 "cloudletTraceFile='" + cloudletTraceFile + '\'' + ",\n" +
                 "maxCloudletsToCreateFromWorkloadFile=" + maxCloudletsToCreateFromWorkloadFile + ",\n" +
                 "workloadReaderMips=" + workloadReaderMips + ",\n" +
+                "splitLargeCloudlets=" + splitLargeCloudlets + ",\n" +
+                "maxCloudletPes=" + maxCloudletPes + ",\n" +
                 "simulationTimestep=" + simulationTimestep + ",\n" +
                 "minTimeBetweenEvents=" + minTimeBetweenEvents + ",\n" +
                 "vmStartupDelay=" + vmStartupDelay + ",\n" +
@@ -312,6 +319,14 @@ public class SimulationSettings {
 
     public int getMaxCloudletsToCreateFromWorkloadFile() {
         return maxCloudletsToCreateFromWorkloadFile;
+    }
+
+    public boolean isSplitLargeCloudlets() {
+        return splitLargeCloudlets;
+    }
+
+    public int getMaxCloudletPes() {
+        return maxCloudletPes;
     }
 
     public double getSimulationTimestep() {

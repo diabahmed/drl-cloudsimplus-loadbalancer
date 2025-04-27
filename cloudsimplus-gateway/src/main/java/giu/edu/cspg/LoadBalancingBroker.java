@@ -94,7 +94,7 @@ public class LoadBalancingBroker extends DatacenterBrokerSimple {
                         getSimulation().clockStr(), cloudlet.getId(), cloudlet.getVm().getId(),
                         cloudlet.getVm().getCloudletScheduler().getCloudletExecList().size(),
                         cloudlet.getVm().getHost(), cloudlet.getVm().getHost().getVmList().size(),
-                        getSimulation().clockStr(), String.format("%.0f", cloudlet.getTotalExecutionTime()));
+                        getSimulation().clockStr(), String.format("%.2f", cloudlet.getTotalExecutionTime()));
                 final double waitTime = Math
                         .ceil(cloudlet.getStartTime() - cloudletArrivalTimeMap.get(cloudlet.getId()));
                 cloudletsFinishedWaitTimeLastTimestep.add(waitTime);
