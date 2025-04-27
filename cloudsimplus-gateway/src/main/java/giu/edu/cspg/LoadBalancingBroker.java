@@ -91,10 +91,10 @@ public class LoadBalancingBroker extends DatacenterBrokerSimple {
             public void update(CloudletVmEventInfo info) {
                 LOGGER.info(
                         "{}: Cloudlet: {} that was running on Vm {} (runs {} cloudlets) on host {} (runs {} Vms) finished at {} with total execution time {}",
-                        getSimulation().clock(), cloudlet.getId(), cloudlet.getVm().getId(),
+                        getSimulation().clockStr(), cloudlet.getId(), cloudlet.getVm().getId(),
                         cloudlet.getVm().getCloudletScheduler().getCloudletExecList().size(),
                         cloudlet.getVm().getHost(), cloudlet.getVm().getHost().getVmList().size(),
-                        getSimulation().clock(), cloudlet.getTotalExecutionTime());
+                        getSimulation().clockStr(), String.format("%.0f", cloudlet.getTotalExecutionTime()));
                 final double waitTime = Math
                         .ceil(cloudlet.getStartTime() - cloudletArrivalTimeMap.get(cloudlet.getId()));
                 cloudletsFinishedWaitTimeLastTimestep.add(waitTime);
