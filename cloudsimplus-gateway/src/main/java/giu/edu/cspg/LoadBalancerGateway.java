@@ -4,11 +4,11 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import static java.util.Comparator.comparingDouble;
 import static java.util.Comparator.comparingLong;
 import java.util.List;
 import java.util.Map;
 
-import org.cloudsimplus.brokers.DatacenterBroker;
 import org.cloudsimplus.builders.tables.AbstractTable;
 import org.cloudsimplus.builders.tables.CsvTable;
 import org.cloudsimplus.cloudlets.Cloudlet;
@@ -590,7 +590,7 @@ public class LoadBalancerGateway {
             return;
         }
 
-        DatacenterBroker broker = simulationCore.getBroker();
+        LoadBalancingBroker broker = simulationCore.getBroker();
         List<Cloudlet> finishedList = broker.getCloudletFinishedList();
         List<Vm> vmList = broker.getVmCreatedList();
 
@@ -607,21 +607,23 @@ public class LoadBalancerGateway {
         LOGGER.info("Simulation finished. Printing results tables...");
 
         // Sort the list before printing
-        // Sort by VM ID first, then by Cloudlet Start Time, then by Cloudlet ID
+        // Sort by Cloudlet Arrival Time first, then by VM ID, then by Cloudlet ID
+        final Map<Long, Double> cloudletsArrivalTimeMap = broker.getCloudletArrivalTimeMap();
         final Comparator<Cloudlet> sortByVmId = comparingLong(c -> c.getVm().getId());
+        final Comparator<Cloudlet> sortByArrivalTime = comparingDouble(c -> cloudletsArrivalTimeMap.get(c.getId()));
         List<Cloudlet> sortedList = new ArrayList<>(finishedList); // Create a copy to sort
-        sortedList.sort(sortByVmId.thenComparing(Cloudlet::getStartTime).thenComparing(Cloudlet::getId));
+        sortedList.sort(sortByArrivalTime.thenComparing(sortByVmId).thenComparing(Cloudlet::getId));
 
         // Create and build the tables
         CloudletsTableBuilderWithDetails cloudletsTableBuilder = new CloudletsTableBuilderWithDetails(sortedList,
-                new CsvTable("CLOUDLETS SIMULATION RESULTS"), simulationCore.getBroker().getCloudletArrivalTimeMap());
+                new CsvTable(), simulationCore.getBroker().getCloudletArrivalTimeMap());
         cloudletsTableBuilder.build(); // Prints the table to the console (default output)
         String outputPath = String.format("results/%s/cloudlets.csv", simName);
         logAndSaveTable((AbstractTable) cloudletsTableBuilder.getTable(), outputPath);
         LOGGER.info("Cloudlet results table printed.");
 
         VmsTableBuilderWithDetails vmTableBuilder = new VmsTableBuilderWithDetails(vmList,
-                new CsvTable("VMs SIMULATION RESULTS"));
+                new CsvTable());
         vmTableBuilder.build(); // Prints the table to the console (default output)
         outputPath = String.format("results/%s/vms.csv", simName);
         logAndSaveTable((AbstractTable) vmTableBuilder.getTable(), outputPath);
