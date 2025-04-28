@@ -1,0 +1,87 @@
+# config.yml - Configuration for DRL Load Balancing and VM Scaling Simulation
+
+common:
+  # --- Simulation Control ---
+  simulation_name: "HybridLBScaling" # Base name for logs/results
+  simulation_timestep: 1.0 # Duration of each RL agent step (seconds)
+  min_time_between_events: 0.01 # CloudSim internal minimum time granularity
+  max_episode_length: 1000 # Max steps per episode before truncation
+
+  # --- Host Configuration ---
+  hosts_count: 10 # Number of physical hosts
+  host_pes: 16 # Processing Elements (cores) per host
+  host_pe_mips: 2000 # MIPS capacity per PE (core)
+  host_ram: 65536 # Host RAM in MB (64 GB)
+  host_bw: 10000 # Host Bandwidth in Mbps (10 Gbps)
+  host_storage: 1000000 # Host Storage in MB (1 TB)
+
+  # --- VM Configuration (Base 'S' & Multipliers) ---
+  small_vm_pes: 2 # PEs for base 'S' VM (like m5a.large)
+  small_vm_ram: 8192 # RAM (MB) for 'S' VM (8 GB)
+  small_vm_bw: 1000 # Bandwidth (Mbps) for 'S' VM (1 Gbps)
+  small_vm_storage: 20000 # Storage (MB) for 'S' VM (20 GB)
+  medium_vm_multiplier: 2 # 'M' VM = 2 * 'S' PEs & RAM (e.g., 4 PEs, 16GB RAM)
+  large_vm_multiplier: 4 # 'L' VM = 4 * 'S' PEs & RAM (e.g., 8 PEs, 32GB RAM)
+  vm_startup_delay: 56.0 # Time (sec) for VM to boot
+  vm_shutdown_delay: 10.0 # Time (sec) broker waits before destroying idle VM (if agent doesn't destroy first)
+
+  # --- Workload Configuration ---
+  workload_mode: "SWF" # Options: "SWF", "CSV"
+  cloudlet_trace_file: "traces/LLNL-Atlas-2006-2.1-cln-short.swf" # Relative path inside container/mounted volume
+  max_cloudlets_to_create_from_workload_file: 1000 # Limit lines read (e.g., 1000, or 2147483647 for practically no limit)
+  workload_reader_mips: 2000 # Reference MIPS for SWF runtime->MI calc (should match host/vm MIPS usually)
+
+  # --- Costing Configuration ---
+  small_vm_hourly_cost: 0.086 # Approx AWS m5a.large hourly cost
+  paying_for_the_full_hour: false # Billing model: false=pay per second, true=pay minimum 1 hour
+
+  # --- Reward Weights ---
+  reward_wait_time_coef: 0.0 # Coefficient for penalty based on avg cloudlet wait time (IMPLEMENT LATER)
+  reward_unutilization_coef: 0.5 # Coefficient for penalty based on avg VM CPU *un*utilization (1 - util)
+  reward_cost_coef: 0.3 # Coefficient for penalty based on allocated_cores/total_cores ratio
+  reward_queue_penalty_coef: 0.2 # Coefficient for penalty based on number of waiting cloudlets
+  reward_invalid_action_coef: 1.0 # Flat penalty for taking an invalid action
+
+  # --- Technical Flags ---
+  clear_created_lists: true # Optimization: Clear broker internal lists (usually safe)
+
+  # --- Python/RL Parameters (Common Defaults) ---
+  mode: "train" # Default mode: "train", "transfer", "test"
+  algorithm: "MaskablePPO" # Default RL algorithm (Requires sb3_contrib) - Use PPO if not using masks initially
+  learning_rate: 0.0003 # Typical PPO learning rate
+  n_steps: 2048 # PPO steps per update
+  batch_size: 64 # PPO minibatch size
+  ent_coef: 0.0 # PPO entropy coefficient
+  gamma: 0.99 # Discount factor
+  seed: 42 # Default random seed
+  save_experiment: true # Whether to save logs/models
+  base_log_dir: "logs" # Root directory for logs
+  experiment_type_dir: "Hybrid_LBS" # Subdirectory for this type of experiment
+  train_model_dir: "" # Used in test/transfer mode: path to existing model dir relative to base_log_dir
+
+# --- Experiment-Specific Overrides ---
+
+experiment_1:
+  experiment_name: "Exp1_MaskPPO_SWFShort_DefRew_10H_211Init_Seed42" # Descriptive name for this run
+  seed: 42
+  initial_s_vm_count: 2
+  initial_m_vm_count: 1
+  initial_l_vm_count: 1
+  timesteps: 100000 # Total training steps for this experiment
+  # Override reward weights for specific tuning if needed
+  # reward_unutilization_coef: 0.6
+  # reward_cost_coef: 0.4
+  # cloudlet_trace_file: "traces/ANL-Intrepid-2009-1.swf" # Use a different trace
+
+experiment_2:
+  experiment_name: "Exp2_MaskPPO_SWFShort_MoreUtilRew_10H_321Init_Seed123"
+  seed: 123
+  initial_s_vm_count: 3
+  initial_m_vm_count: 2
+  initial_l_vm_count: 1
+  timesteps: 100000
+  reward_unutilization_coef: 0.7 # Example: Higher weight on utilization
+  reward_cost_coef: 0.2
+  reward_queue_penalty_coef: 0.1
+# Add more experiment blocks (experiment_3, experiment_4, ...) as needed
+# Each can override any parameter from the 'common' section.
