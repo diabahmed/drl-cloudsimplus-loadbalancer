@@ -250,8 +250,7 @@ public final class SimulationCore {
 
     double calculateTargetTime() {
         // if first step we have already done 0.1 and we need to finish the first step
-        // at 1
-        // else, just add 1 to the current time
+        // at 1 else, just add 1 to the current time
         final double targetTime;
         if (firstStep) {
             targetTime = settings.getSimulationTimestep();
