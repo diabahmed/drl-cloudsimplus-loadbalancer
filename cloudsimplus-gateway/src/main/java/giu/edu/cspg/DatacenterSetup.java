@@ -57,7 +57,7 @@ public class DatacenterSetup {
     private static Host createHost(SimulationSettings settings, int index) {
         final List<Pe> peList = new ArrayList<>();
         long hostPeMips = settings.getHostPeMips();
-        for (int i = 0; i < settings.getHostPes() + (index * 10); i++) {
+        for (int i = 0; i < settings.getHostPes() + (index * 2); i++) {
             peList.add(new PeSimple(hostPeMips, new PeProvisionerSimple()));
         }
 
