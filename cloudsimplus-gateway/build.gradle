@@ -3,7 +3,7 @@
  *
  * This generated file contains a commented-out sample Java project to get you started.
  * For more details take a look at the Java Quickstart chapter in the Gradle
- * user guide available at https://docs.gradle.org/3.4.1/userguide/tutorial_java_projects.html
+ * user guide available at https://docs.gradle.org/8.14/userguide/userguide.html
  */
 
 // Apply the java plugin to add support for Java
@@ -26,12 +26,12 @@ dependencies {
     implementation 'org.cloudsimplus:cloudsimplus:8.5.5'
     implementation 'com.typesafe:config:1.4.3'
     implementation 'org.yaml:snakeyaml:2.4'
-    implementation group: 'net.sf.py4j', name: 'py4j', version: '0.10.9.9'
-    implementation group: "ch.qos.logback", name: "logback-classic", version: "1.5.18"
-    implementation group: 'org.apache.commons', name: 'commons-collections4', version: '4.5.0-M3'
+    implementation 'net.sf.py4j:py4j:0.10.9.9'
+    implementation 'ch.qos.logback:logback-classic:1.5.18'
+    implementation 'org.apache.commons:commons-collections4:4.5.0-M3'
     implementation 'com.google.code.gson:gson:2.12.1'
-    implementation group: 'org.postgresql', name: 'postgresql', version: '42.7.5'
-    implementation group: 'org.hamcrest', name: 'hamcrest', version: '3.0'
+    implementation 'org.postgresql:postgresql:42.7.5'
+    implementation 'org.hamcrest:hamcrest:3.0'
 
     testImplementation 'junit:junit:4.13.2'
     testImplementation platform('org.junit:junit-bom:5.10.2')
