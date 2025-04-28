@@ -3,25 +3,16 @@ package giu.edu.cspg;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
-import static java.util.Comparator.comparingDouble;
-import static java.util.Comparator.comparingLong;
 import java.util.List;
 import java.util.Map;
 
-import org.cloudsimplus.builders.tables.AbstractTable;
-import org.cloudsimplus.builders.tables.CsvTable;
 import org.cloudsimplus.cloudlets.Cloudlet;
 import org.cloudsimplus.hosts.Host;
-import org.cloudsimplus.hosts.HostStateHistoryEntry;
 import org.cloudsimplus.vms.Vm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import giu.edu.cspg.tables.CloudletsTableBuilderWithDetails;
-import giu.edu.cspg.tables.HostHistoryTableBuilderCsv;
-import static giu.edu.cspg.tables.TableLogger.logAndSaveTable;
-import giu.edu.cspg.tables.VmsTableBuilderWithDetails;
+import giu.edu.cspg.utils.SimulationResultUtils;
 import py4j.GatewayServer;
 
 public class LoadBalancerGateway {
@@ -572,7 +563,7 @@ public class LoadBalancerGateway {
         LOGGER.info("Received close request from Python.");
         if (simulationCore != null) {
             // Print results before stopping
-            printSimulationResults();
+            SimulationResultUtils.printAndSaveResults(simulationCore, settings.getSimulationName());
             simulationCore.stopSimulation();
         }
         // Trigger JVM shutdown
@@ -580,134 +571,6 @@ public class LoadBalancerGateway {
             LOGGER.info("Initiating gateway shutdown via Main.initiateShutdown.");
             Main.initiateShutdown(this.gatewayServer);
         }
-    }
-
-    /**
-     * Prints the simulation results using CloudletsTableBuilder.
-     * Called internally by close().
-     */
-    private void printSimulationResults() {
-        if (simulationCore == null || simulationCore.getBroker() == null) {
-            LOGGER.error("Cannot print results, simulation core or broker is null.");
-            return;
-        }
-
-        LoadBalancingBroker broker = simulationCore.getBroker();
-        List<Cloudlet> finishedList = broker.getCloudletFinishedList();
-        List<Vm> vmList = broker.getVmCreatedList();
-
-        if (vmList.isEmpty()) {
-            LOGGER.info("No VMs finished to print in the results table.");
-            return;
-        }
-
-        if (finishedList.isEmpty()) {
-            LOGGER.info("No cloudlets finished to print in the results table.");
-            return;
-        }
-
-        LOGGER.info("Simulation finished. Printing results tables...");
-
-        // Sort the list before printing
-        // Sort by Cloudlet Arrival Time first, then by VM ID, then by Cloudlet ID
-        final Map<Long, Double> cloudletsArrivalTimeMap = broker.getCloudletArrivalTimeMap();
-        final Comparator<Cloudlet> sortByVmId = comparingLong(c -> c.getVm().getId());
-        final Comparator<Cloudlet> sortByArrivalTime = comparingDouble(c -> cloudletsArrivalTimeMap.get(c.getId()));
-        List<Cloudlet> sortedList = new ArrayList<>(finishedList); // Create a copy to sort
-        sortedList.sort(sortByArrivalTime.thenComparing(sortByVmId).thenComparing(Cloudlet::getId));
-
-        // Create and build the tables
-        CloudletsTableBuilderWithDetails cloudletsTableBuilder = new CloudletsTableBuilderWithDetails(sortedList,
-                new CsvTable(), simulationCore.getBroker().getCloudletArrivalTimeMap());
-        cloudletsTableBuilder.build(); // Prints the table to the console (default output)
-        String outputPath = String.format("results/%s/cloudlets.csv", simName);
-        logAndSaveTable((AbstractTable) cloudletsTableBuilder.getTable(), outputPath);
-        LOGGER.info("Cloudlet results table printed.");
-
-        VmsTableBuilderWithDetails vmTableBuilder = new VmsTableBuilderWithDetails(vmList,
-                new CsvTable());
-        vmTableBuilder.build(); // Prints the table to the console (default output)
-        outputPath = String.format("results/%s/vms.csv", simName);
-        logAndSaveTable((AbstractTable) vmTableBuilder.getTable(), outputPath);
-        LOGGER.info("VM results table printed.");
-
-        List<Host> hostList = simulationCore.getDatacenter().getHostList();
-        hostList.forEach(this::printHostHistory);
-        LOGGER.info("Host results table printed.");
-
-        showTotalCost(sortedList);
-
-        LOGGER.info("Total simulation time: {} seconds", simulationCore.getClock());
-    }
-
-    /**
-     * Calculates and prints the total and mean cost as well as the mean CPU time
-     * for the finished cloudlets.
-     *
-     * @param finishedCloudlets list of finished cloudlets.
-     */
-    private void showTotalCost(List<Cloudlet> finishedCloudlets) {
-        LOGGER.info("Calculating simulation costs and statistics...");
-        double totalCost = 0.0;
-        double totalVmCost = 0.0;
-        double totalCompletionTime = 0.0;
-        double totalVmCpuUtilization = 0.0;
-        int count;
-        int vmCount = 0;
-
-        for (Cloudlet cloudlet : finishedCloudlets) {
-            CloudletCost cloudletCost = new CloudletCost(cloudlet,
-                    simulationCore.getBroker().getCloudletArrivalTimeMap());
-
-            totalCost += cloudletCost.getTotalCost();
-            final var totalWaitTime = Math.ceil(cloudlet.getStartTime()
-                    - simulationCore.getBroker().getCloudletArrivalTimeMap().get(cloudlet.getId()));
-            totalCompletionTime += (cloudlet.getTotalExecutionTime() + totalWaitTime);
-        }
-
-        for (Vm vm : simulationCore.getBroker().getVmCreatedList()) {
-            if (vm.hasStarted() || vm.isFinished()) {
-                if (vm.getCpuUtilizationStats().getMean() > 0) {
-                    // Only consider VMs with CPU utilization > 0
-                    totalVmCpuUtilization += vm.getCpuUtilizationStats().getMean() * 100.0;
-                    totalVmCost += new org.cloudsimplus.vms.VmCost(vm).getTotalCost();
-                    vmCount++;
-                }
-            }
-        }
-
-        count = finishedCloudlets.size();
-
-        LOGGER.info("Total cost of executing " + count + " Cloudlets = $" + String.format("%.2f", totalCost));
-        LOGGER.info("Total cost of executing " + vmCount + " VMs = $" + String.format("%.2f", totalVmCost));
-        if (count > 0) {
-            LOGGER.info("Mean cost of executing " + count + " Cloudlets = $"
-                    + String.format("%.2f", totalCost / count));
-            LOGGER.info("Mean cost of executing " + vmCount + " VMs = $"
-                    + String.format("%.2f", totalVmCost / vmCount));
-            LOGGER.info("Mean actual Completion time of " + count + " Cloudlets = "
-                    + String.format("%.2f", totalCompletionTime / count));
-            LOGGER.info("Mean CPU utilization of " + vmCount + " VMs = "
-                    + String.format("%.2f", totalVmCpuUtilization / vmCount) + "%");
-        } else {
-            LOGGER.info("No finished Cloudlets to calculate mean costs/time.");
-        }
-    }
-
-    private void printHostHistory(Host host) {
-        final boolean cpuUtilizationNotZero = host.getStateHistory()
-                .stream()
-                .map(HostStateHistoryEntry::percentUsage)
-                .anyMatch(cpuUtilization -> cpuUtilization > 0);
-
-        if (cpuUtilizationNotZero) {
-            HostHistoryTableBuilderCsv hostTableBuilder = new HostHistoryTableBuilderCsv(host, new CsvTable());
-            hostTableBuilder.setTitle(host.toString());
-            hostTableBuilder.build(); // Prints the table to the console (default output)
-            String outputPath = String.format("results/%s/host%d.csv", simName, host.getId());
-            logAndSaveTable((AbstractTable) hostTableBuilder.getTable(), outputPath);
-        } else
-            LOGGER.info("\t%s CPU was zero all the time%n", host);
     }
 
     /** Called by Main to set the server instance if shutdown is needed. */
