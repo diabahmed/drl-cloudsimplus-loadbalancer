@@ -22,6 +22,7 @@ public final class WorkloadFileReader extends TraceReaderAbstract {
     private static final int SWF_RUN_TIME_INDEX = 3;
     private static final int SWF_NUM_PROC_INDEX = 4; // Actual PEs used
     private static final int SWF_REQ_NUM_PROC_INDEX = 7; // Requested PEs
+    private static final int SWF_STATUS_INDEX = 10; // Job status (0=Failed)
     private static final int SWF_FIELD_COUNT = 18; // Minimum expected fields
     private static final int SWF_IRRELEVANT = -1; // Placeholder for irrelevant fields
 
@@ -95,6 +96,11 @@ public final class WorkloadFileReader extends TraceReaderAbstract {
     private Boolean createCloudletDescriptorFromSwfLine(final String[] parsedLineArray) {
         // If all the fields couldn't be read, don't create the Cloudlet Descriptor.
         if (parsedLineArray.length < SWF_FIELD_COUNT) {
+            return false;
+        }
+
+        // Check the job status field to filter out jobs that are not completed.
+        if (Integer.parseInt(parsedLineArray[SWF_STATUS_INDEX].trim()) == 0) {
             return false;
         }
 
