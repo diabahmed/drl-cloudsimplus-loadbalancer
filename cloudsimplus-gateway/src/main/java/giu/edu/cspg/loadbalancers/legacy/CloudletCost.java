@@ -1,4 +1,4 @@
-package giu.edu.cspg.loadbalancers;
+package giu.edu.cspg.loadbalancers.legacy;
 
 import java.util.Objects;
 

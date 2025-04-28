@@ -1,4 +1,4 @@
-package giu.edu.cspg.loadbalancers;
+package giu.edu.cspg.loadbalancers.legacy;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -49,8 +49,8 @@ import com.typesafe.config.ConfigFactory;
 public abstract class BaseAbstract {
 
     // --- Static configuration and constants loaded from defaults.conf ---
-    private static final Logger logger = LoggerFactory.getLogger(BaseAbstract.class);
-    private static final Config defaultConfig = ConfigFactory.parseResources("defaults.conf");
+    private static final Logger logger = LoggerFactory.getLogger(BaseAbstract.class.getSimpleName());
+    private static final Config defaultConfig = ConfigFactory.parseResources("legacy/defaults.conf");
 
     public static final int NUMBER_OF_VMS = defaultConfig.getInt("vm.number");
     public static final int VM_PES = defaultConfig.getInt("vm.pes");
