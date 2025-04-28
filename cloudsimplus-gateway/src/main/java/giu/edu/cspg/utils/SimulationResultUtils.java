@@ -8,9 +8,11 @@ import giu.edu.cspg.tables.HostHistoryTableBuilderCsv;
 import giu.edu.cspg.tables.TableLogger;
 import giu.edu.cspg.tables.VmsTableBuilderWithDetails;
 
+import org.cloudsimplus.brokers.DatacenterBrokerSimple;
 import org.cloudsimplus.builders.tables.AbstractTable;
 import org.cloudsimplus.builders.tables.CsvTable;
 import org.cloudsimplus.cloudlets.Cloudlet;
+import org.cloudsimplus.datacenters.Datacenter;
 import org.cloudsimplus.hosts.Host;
 import org.cloudsimplus.hosts.HostStateHistoryEntry;
 import org.cloudsimplus.vms.Vm;
@@ -39,9 +41,30 @@ public class SimulationResultUtils {
      *                       "SimulationName_PolicyName").
      */
     public static void printAndSaveResults(SimulationCore simulationCore, String baseFileName) {
+        LoadBalancingBroker broker = simulationCore.getBroker();
+        Map<Long, Double> arrivalTimeMap = broker.getCloudletArrivalTimeMap();
+        Datacenter datacenter = simulationCore.getDatacenter();
+        double clock = simulationCore.getClock();
+        printAndSaveResults(broker, arrivalTimeMap, datacenter, clock, baseFileName);
+    }
+
+    /**
+     * Prints standard simulation results tables (Cloudlets, VMs, Hosts) and saves
+     * them to CSV files.
+     * 
+     * @param broker         The broker instance after the simulation has finished.
+     * @param arrivalTimeMap A map of Cloudlet IDs to their arrival times.
+     * @param datacenter     The datacenter instance after the simulation has
+     *                       finished.
+     * @param clock          The simulation clock time at the end of the simulation.
+     * @param baseFileName   A base name for the output files (e.g.,
+     *                       "SimulationName_PolicyName").
+     */
+    public static void printAndSaveResults(DatacenterBrokerSimple broker, Map<Long, Double> arrivalTimeMap,
+            Datacenter datacenter, double clock,
+            String baseFileName) {
         LOGGER.info("Processing simulation results for {}...", baseFileName);
 
-        LoadBalancingBroker broker = simulationCore.getBroker();
         if (broker == null) {
             LOGGER.error("Broker is null. Cannot print results.");
             return;
@@ -53,7 +76,6 @@ public class SimulationResultUtils {
             LOGGER.info("No cloudlets finished to print in the results table.");
         } else {
             LOGGER.info("Generating Cloudlet Results Table ({} finished)...", finishedList.size());
-            final Map<Long, Double> arrivalTimeMap = broker.getCloudletArrivalTimeMap();
             // Sort Cloudlets (by Arrival Time first, then by VM ID, then by Cloudlet ID)
             List<Cloudlet> sortedCloudlets = new ArrayList<>(finishedList);
             final Comparator<Cloudlet> sortByVmId = comparingLong(c -> c.getVm().getId());
@@ -82,7 +104,7 @@ public class SimulationResultUtils {
         }
 
         // --- Host Results ---
-        List<Host> hostList = simulationCore.getDatacenter().getHostList();
+        List<Host> hostList = datacenter.getHostList();
         if (hostList.isEmpty()) {
             LOGGER.info("No Hosts were created.");
         } else {
@@ -92,9 +114,9 @@ public class SimulationResultUtils {
         }
 
         // --- Overall Cost/Stats ---
-        showOverallStats(broker, vmList, finishedList);
+        showOverallStats(arrivalTimeMap, vmList, finishedList);
 
-        LOGGER.info("Total simulation time: {} seconds", simulationCore.getClock());
+        LOGGER.info("Total simulation time: {} seconds", clock);
         LOGGER.info("Result processing finished for {}.", baseFileName);
     }
 
@@ -117,7 +139,7 @@ public class SimulationResultUtils {
     }
 
     /** Calculates and logs overall simulation statistics. */
-    private static void showOverallStats(LoadBalancingBroker broker, List<Vm> vmList,
+    private static void showOverallStats(Map<Long, Double> arrivalTimeMap, List<Vm> vmList,
             List<Cloudlet> finishedCloudlets) {
         LOGGER.info("Calculating Overall Simulation Statistics...");
 
@@ -127,7 +149,6 @@ public class SimulationResultUtils {
         double totalVmCpuUtilizationSum = 0.0;
         int finishedCount = finishedCloudlets.size();
         int utilizedVmCount = 0;
-        Map<Long, Double> arrivalTimeMap = broker.getCloudletArrivalTimeMap();
 
         for (Cloudlet cloudlet : finishedCloudlets) {
             CloudletCost cloudletCost = new CloudletCost(cloudlet, arrivalTimeMap);
