@@ -72,11 +72,12 @@ public class LoadBalancerGateway {
         }
         int totalHostCores = (int) simulationCore.getTotalHostCores();
         int smallestVmCores = settings.getSmallVmPes();
+        LOGGER.info("Total host cores: {}, Smallest VM cores: {}", totalHostCores, smallestVmCores);
         // Simple calculation: total host cores / smallest VM cores
         // Could be refined based on RAM/BW if those are more limiting
-        // Theoretical max + a buffer (e.g., 20%) in case of fragmentation or many small
+        // Theoretical max + a buffer (e.g., 10%) in case of fragmentation or many small
         // VMs created
-        return (int) Math.ceil((double) (totalHostCores / smallestVmCores) * 1.2);
+        return (int) Math.ceil((double) (totalHostCores / smallestVmCores) * 1.1);
         // Alternative: Use a large fixed number from config if preferred
         // return settings.getIntParam("max_observation_vms", 100); // Example
     }
