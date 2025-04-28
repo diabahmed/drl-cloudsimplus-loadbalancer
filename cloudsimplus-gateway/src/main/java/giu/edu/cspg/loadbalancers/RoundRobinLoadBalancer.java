@@ -1,60 +1,84 @@
 package giu.edu.cspg.loadbalancers;
 
-import java.util.ArrayList;
-import java.util.List;
+import giu.edu.cspg.SimulationCore;
+import giu.edu.cspg.SimulationSettings;
+import giu.edu.cspg.LoadBalancingBroker;
+import giu.edu.cspg.utils.ConfigLoader;
+import giu.edu.cspg.utils.SimulationResultUtils;
 
-import org.cloudsimplus.cloudlets.Cloudlet;
+import org.cloudsimplus.vms.Vm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * This class creates a list of Cloudlet objects and assigns each
- * one to a VM using a round-robin strategy.
- */
-public class RoundRobinLoadBalancer extends BaseAbstract {
+import java.util.List;
+import java.util.Map;
 
-    private static final Logger logger = LoggerFactory.getLogger(RoundRobinLoadBalancer.class.getSimpleName());
+public class RoundRobinLoadBalancer {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RoundRobinLoadBalancer.class.getSimpleName());
+    private static final String CONFIG_FILE = "config.yml"; // Or load from args/env var
+    private static final String EXPERIMENT_ID = "experiment_1"; // Or load from args/env var
+
+    private int roundRobinVmIndex = -1; // Start before the first VM
 
     public static void main(String[] args) {
-        RoundRobinLoadBalancer roundRobinLoadBalancer = new RoundRobinLoadBalancer();
-        roundRobinLoadBalancer.run();
+        new RoundRobinLoadBalancer().run(); // Create instance to manage index state
     }
 
-    /**
-     * Creates a list of Cloudlet objects that together represent the
-     * distributed processes of a given fictitious application.
-     * Each cloudlet is assigned to a VM in a round-robin manner.
-     *
-     * @return the list of created Cloudlets.
-     */
-    @Override
-    protected List<Cloudlet> createCloudlets() {
-        logger.info("Create list of network cloudlets and assign VM in round robin manner");
+    public void run() {
+        LOGGER.info("Starting RoundRobinLoadBalancer Experiment...");
 
-        int numberOfCloudlets;
-        if (cloudletList.isEmpty()) {
-            numberOfCloudlets = INITIAL_CLOUDLETS;
-        } else {
-            numberOfCloudlets = DYNAMIC_CLOUDLETS_AT_A_TIME;
+        // 1. Load Configuration
+        Map<String, Object> params = ConfigLoader.loadConfig(CONFIG_FILE, EXPERIMENT_ID);
+        if (params.isEmpty()) {
+            LOGGER.error("Failed to load configuration. Exiting.");
+            return;
         }
+        SimulationSettings settings = new SimulationSettings(params);
 
-        ArrayList<Cloudlet> newCloudletList = new ArrayList<>(numberOfCloudlets);
-        cloudletlistsize = cloudletList.size();
+        // 2. Create Simulation Core
+        SimulationCore simulationCore = new SimulationCore(settings);
+        LoadBalancingBroker broker = simulationCore.getBroker();
 
-        // Loop for the required number of new cloudlets.
-        for (int i = 0; i < numberOfCloudlets; i++) {
-            if (cloudletlistsize < NUMBER_OF_CLOUDLETS) {
-                // Determine the VM index using round-robin assignment.
-                int vmIndex = cloudletlistsize % NUMBER_OF_VMS;
-                // Create a cloudlet assigned to the determined VM.
-                Cloudlet cloudlet = createCloudlet(vmList.get(vmIndex));
-                // Add cloudlet to both the global cloudlet list and the local list.
-                cloudletList.add(cloudlet);
-                newCloudletList.add(cloudlet);
-                cloudletlistsize = cloudletList.size();
+        // 3. Main Simulation Loop
+        LOGGER.info("Starting simulation loop...");
+        int step = 0;
+        while (simulationCore.isRunning()) {
+            step++;
+            LOGGER.debug("--- Step {} (Clock: {}) ---", step, String.format("%.2f", simulationCore.getClock()));
+
+            // Assign waiting cloudlets using Round Robin logic
+            while (broker.hasWaitingCloudlets()) {
+                List<Vm> runningVms = broker.getVmExecList();
+                if (!runningVms.isEmpty()) {
+                    // Increment index and wrap around
+                    roundRobinVmIndex = (roundRobinVmIndex + 1) % runningVms.size();
+                    Vm targetVm = runningVms.get(roundRobinVmIndex);
+                    LOGGER.debug("RoundRobin: Attempting to assign next cloudlet to VM {} (Index {})", targetVm.getId(),
+                            roundRobinVmIndex);
+                    boolean assigned = broker.assignCloudletToVm((int) targetVm.getId());
+                    if (!assigned) {
+                        LOGGER.warn(
+                                "RoundRobin assignment failed for VM {}. May be unsuitable. Trying next VM if available.",
+                                targetVm.getId());
+                        // If assignment fails, maybe try the *next* RR index immediately?
+                        // Or just break and let the next step handle it? Breaking is simpler.
+                        break;
+                    }
+                } else {
+                    LOGGER.warn("RoundRobin LB: No running VMs available to assign cloudlet. Queue size: {}",
+                            broker.getWaitingCloudletCount());
+                    break; // Exit inner loop if no VMs
+                }
             }
-        }
 
-        return newCloudletList;
+            // Advance simulation time by one step
+            simulationCore.runOneTimestep();
+        }
+        LOGGER.info("Simulation loop finished at clock: {}", String.format("%.2f", simulationCore.getClock()));
+
+        // 4. Print and Save Results
+        SimulationResultUtils.printAndSaveResults(simulationCore, settings.getSimulationName() + "_RoundRobin");
+
+        LOGGER.info("RoundRobinLoadBalancer Experiment Finished.");
     }
 }

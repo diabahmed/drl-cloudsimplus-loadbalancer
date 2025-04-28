@@ -1,73 +1,80 @@
 package giu.edu.cspg.loadbalancers;
 
-import java.util.ArrayList;
-import java.util.List;
+import giu.edu.cspg.SimulationCore;
+import giu.edu.cspg.SimulationSettings;
+import giu.edu.cspg.LoadBalancingBroker;
+import giu.edu.cspg.utils.ConfigLoader;
+import giu.edu.cspg.utils.SimulationResultUtils;
 
-import org.cloudsimplus.cloudlets.Cloudlet;
 import org.cloudsimplus.distributions.ContinuousDistribution;
 import org.cloudsimplus.distributions.UniformDistr;
 import org.cloudsimplus.vms.Vm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * This class creates a list of Cloudlet objects and assigns each
- * one to a random virtual machine.
- */
-public class RandomLoadBalancer extends BaseAbstract {
+import java.util.List;
+import java.util.Map;
 
-    private static final Logger logger = LoggerFactory.getLogger(RandomLoadBalancer.class.getSimpleName());
+public class RandomLoadBalancer {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RandomLoadBalancer.class.getSimpleName());
+    private static final String CONFIG_FILE = "config.yml"; // Or load from args/env var
+    private static final String EXPERIMENT_ID = "experiment_1"; // Or load from args/env var
 
     public static void main(String[] args) {
-        RandomLoadBalancer randomLoadBalancer = new RandomLoadBalancer();
-        randomLoadBalancer.run();
-    }
+        LOGGER.info("Starting RandomLoadBalancer Experiment...");
 
-    /**
-     * Creates a list of Cloudlet objects that together represent the
-     * distributed processes of a given fictitious application.
-     * The cloudlets are assigned to a random VM.
-     *
-     * @return the list of created Cloudlets.
-     */
-    @Override
-    protected List<Cloudlet> createCloudlets() {
-        logger.info("Create list of network cloudlets and assign VM randomly");
-
-        int numberOfCloudlets;
-        if (cloudletList.isEmpty()) {
-            numberOfCloudlets = INITIAL_CLOUDLETS;
-        } else {
-            numberOfCloudlets = DYNAMIC_CLOUDLETS_AT_A_TIME;
+        // 1. Load Configuration using ConfigLoader
+        Map<String, Object> params = ConfigLoader.loadConfig(CONFIG_FILE, EXPERIMENT_ID);
+        if (params.isEmpty()) {
+            LOGGER.error("Failed to load configuration. Exiting.");
+            return;
         }
+        SimulationSettings settings = new SimulationSettings(params);
 
-        ArrayList<Cloudlet> newCloudletList = new ArrayList<>(numberOfCloudlets);
-        // Using the current size of the global cloudletList to control creation.
-        cloudletlistsize = cloudletList.size();
+        // 2. Create Simulation Core (Handles setup based on settings)
+        SimulationCore simulationCore = new SimulationCore(settings);
+        LoadBalancingBroker broker = simulationCore.getBroker();
 
-        /*
-         * You can remove the seed parameter to get a dynamic one, based on current
-         * computer time.
-         * With a dynamic seed you will get different results at each simulation run.
-         */
-        final long seed = 1;
-        ContinuousDistribution rand = new UniformDistr(0, NUMBER_OF_VMS - 1, seed);
+        long seed = params.containsKey("seed") ? ((Number) params.get("seed")).longValue() : 1;
+        ContinuousDistribution rand = new UniformDistr(0, broker.getVmExecList().size() - 1, seed);
 
-        // Loop for the required number of new cloudlets.
-        for (int i = 0; i < numberOfCloudlets; i++) {
-            if (cloudletlistsize < NUMBER_OF_CLOUDLETS) {
-                // Randomly select a VM.
-                int vmIndex = (int) rand.sample();
-                final Vm vm = vmList.get(vmIndex);
-                // Create cloudlet assigned to that VM.
-                Cloudlet cloudlet = createCloudlet(vm);
-                // Add cloudlet to both the global list and the local list.
-                cloudletList.add(cloudlet);
-                newCloudletList.add(cloudlet);
-                cloudletlistsize = cloudletList.size();
+        // 3. Main Simulation Loop (Mimicking Agent Interaction)
+        LOGGER.info("Starting simulation loop...");
+        int step = 0;
+        while (simulationCore.isRunning()) {
+            step++;
+            LOGGER.debug("--- Step {} (Clock: {}) ---", step, String.format("%.2f", simulationCore.getClock()));
+
+            // Assign waiting cloudlets using Random logic
+            while (broker.hasWaitingCloudlets()) {
+                List<Vm> runningVms = broker.getVmExecList();
+                if (!runningVms.isEmpty()) {
+                    int randomIndex = (int) rand.sample();
+                    Vm targetVm = runningVms.get(randomIndex);
+                    LOGGER.debug("Random: Attempting to assign next cloudlet to VM {}", targetVm.getId());
+                    boolean assigned = broker.assignCloudletToVm((int) targetVm.getId());
+                    if (!assigned) {
+                        LOGGER.warn("Random assignment failed for VM {}. May be unsuitable.", targetVm.getId());
+                        // Basic handling: if assignment fails, break the inner loop for this step
+                        // to avoid potentially getting stuck trying to assign to the same bad VM.
+                        // A more robust approach might try another random VM or wait.
+                        break;
+                    }
+                } else {
+                    LOGGER.warn("Random LB: No running VMs available to assign cloudlet. Queue size: {}",
+                            broker.getWaitingCloudletCount());
+                    break; // No point looping if no VMs are available
+                }
             }
-        }
 
-        return newCloudletList;
+            // Advance simulation time by one step
+            simulationCore.runOneTimestep();
+        }
+        LOGGER.info("Simulation loop finished at clock: {}", String.format("%.2f", simulationCore.getClock()));
+
+        // 4. Print and Save Results using common utility
+        SimulationResultUtils.printAndSaveResults(simulationCore, settings.getSimulationName() + "_Random");
+
+        LOGGER.info("RandomLoadBalancer Experiment Finished.");
     }
 }
