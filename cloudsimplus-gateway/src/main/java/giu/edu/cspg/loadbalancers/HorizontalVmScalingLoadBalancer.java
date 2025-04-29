@@ -13,6 +13,7 @@ import org.cloudsimplus.brokers.DatacenterBrokerSimple;
 import org.cloudsimplus.cloudlets.Cloudlet;
 import org.cloudsimplus.core.CloudSimPlus;
 import org.cloudsimplus.datacenters.Datacenter;
+import org.cloudsimplus.datacenters.DatacenterCharacteristicsSimple;
 import org.cloudsimplus.datacenters.DatacenterSimple;
 import org.cloudsimplus.hosts.Host;
 import org.cloudsimplus.hosts.HostSimple;
@@ -67,6 +68,7 @@ public class HorizontalVmScalingLoadBalancer {
             throw new RuntimeException("Configuration could not be loaded.");
         }
         this.settings = new SimulationSettings(params);
+        LOGGER.info("Simulation settings dump\n{}", settings.printSettings());
 
         // 2. Setup Simulation Core Components
         this.simulation = new CloudSimPlus();
@@ -119,8 +121,7 @@ public class HorizontalVmScalingLoadBalancer {
         // VMs/Broker
         VmAllocationPolicySimple allocationPolicy = new VmAllocationPolicySimple();
         Datacenter dc = new DatacenterSimple(simulation, hostList, allocationPolicy);
-        dc.getCharacteristics().setCostPerBw(0.001667);
-        dc.getCharacteristics().setCostPerSecond(0.75);
+        dc.setCharacteristics(new DatacenterCharacteristicsSimple(0.75, 0.02, 0.001, 0.005));
         dc.setSchedulingInterval(5);
         return dc;
     }
