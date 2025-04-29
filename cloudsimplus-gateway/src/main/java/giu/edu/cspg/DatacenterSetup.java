@@ -48,7 +48,7 @@ public class DatacenterSetup {
                 hostList.size(), vmAllocationPolicy.getClass().getSimpleName());
         // Use the provided allocation policy (which should be VmAllocationPolicyCustom)
         return new DatacenterSimple(simulation, hostList, vmAllocationPolicy)
-                .setCharacteristics(new DatacenterCharacteristicsSimple(0.01, 0.02, 0.001, 0.005));
+                .setCharacteristics(new DatacenterCharacteristicsSimple(0.75, 0.02, 0.001, 0.005));
     }
 
     /**
