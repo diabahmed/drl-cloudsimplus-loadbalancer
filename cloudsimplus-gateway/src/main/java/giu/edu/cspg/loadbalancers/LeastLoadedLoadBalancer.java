@@ -32,6 +32,7 @@ public class LeastLoadedLoadBalancer {
             return;
         }
         SimulationSettings settings = new SimulationSettings(params);
+        LOGGER.info("Simulation settings dump\n{}", settings.printSettings());
 
         // 2. Create Simulation Core
         SimulationCore simulationCore = new SimulationCore(settings);

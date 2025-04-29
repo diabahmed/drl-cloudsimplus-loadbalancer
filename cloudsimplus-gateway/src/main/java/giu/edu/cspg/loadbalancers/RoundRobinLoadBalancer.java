@@ -1,17 +1,17 @@
 package giu.edu.cspg.loadbalancers;
 
-import giu.edu.cspg.SimulationCore;
-import giu.edu.cspg.SimulationSettings;
-import giu.edu.cspg.LoadBalancingBroker;
-import giu.edu.cspg.utils.ConfigLoader;
-import giu.edu.cspg.utils.SimulationResultUtils;
+import java.util.List;
+import java.util.Map;
 
 import org.cloudsimplus.vms.Vm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-import java.util.Map;
+import giu.edu.cspg.LoadBalancingBroker;
+import giu.edu.cspg.SimulationCore;
+import giu.edu.cspg.SimulationSettings;
+import giu.edu.cspg.utils.ConfigLoader;
+import giu.edu.cspg.utils.SimulationResultUtils;
 
 public class RoundRobinLoadBalancer {
     private static final Logger LOGGER = LoggerFactory.getLogger(RoundRobinLoadBalancer.class.getSimpleName());
@@ -34,6 +34,7 @@ public class RoundRobinLoadBalancer {
             return;
         }
         SimulationSettings settings = new SimulationSettings(params);
+        LOGGER.info("Simulation settings dump\n{}", settings.printSettings());
 
         // 2. Create Simulation Core
         SimulationCore simulationCore = new SimulationCore(settings);

@@ -1,10 +1,7 @@
 package giu.edu.cspg.loadbalancers;
 
-import giu.edu.cspg.SimulationCore;
-import giu.edu.cspg.SimulationSettings;
-import giu.edu.cspg.LoadBalancingBroker;
-import giu.edu.cspg.utils.ConfigLoader;
-import giu.edu.cspg.utils.SimulationResultUtils;
+import java.util.List;
+import java.util.Map;
 
 import org.cloudsimplus.distributions.ContinuousDistribution;
 import org.cloudsimplus.distributions.UniformDistr;
@@ -12,8 +9,11 @@ import org.cloudsimplus.vms.Vm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-import java.util.Map;
+import giu.edu.cspg.LoadBalancingBroker;
+import giu.edu.cspg.SimulationCore;
+import giu.edu.cspg.SimulationSettings;
+import giu.edu.cspg.utils.ConfigLoader;
+import giu.edu.cspg.utils.SimulationResultUtils;
 
 public class RandomLoadBalancer {
     private static final Logger LOGGER = LoggerFactory.getLogger(RandomLoadBalancer.class.getSimpleName());
@@ -30,13 +30,14 @@ public class RandomLoadBalancer {
             return;
         }
         SimulationSettings settings = new SimulationSettings(params);
+        LOGGER.info("Simulation settings dump\n{}", settings.printSettings());
 
         // 2. Create Simulation Core (Handles setup based on settings)
         SimulationCore simulationCore = new SimulationCore(settings);
         LoadBalancingBroker broker = simulationCore.getBroker();
 
         long seed = params.containsKey("seed") ? ((Number) params.get("seed")).longValue() : 1;
-        ContinuousDistribution rand = new UniformDistr(0, broker.getVmExecList().size() - 1, seed);
+        ContinuousDistribution rand = new UniformDistr(0, simulationCore.getVmPoolSize(), seed);
 
         // 3. Main Simulation Loop (Mimicking Agent Interaction)
         LOGGER.info("Starting simulation loop...");
