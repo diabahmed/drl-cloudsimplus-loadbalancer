@@ -7,9 +7,7 @@ import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.stream.Collectors;
 
-import org.cloudsimplus.allocationpolicies.VmAllocationPolicySimple;
 import org.cloudsimplus.autoscaling.HorizontalVmScalingSimple;
-import org.cloudsimplus.brokers.DatacenterBrokerSimple;
 import org.cloudsimplus.cloudlets.Cloudlet;
 import org.cloudsimplus.core.CloudSimPlus;
 import org.cloudsimplus.datacenters.Datacenter;
@@ -30,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import giu.edu.cspg.CloudletDescriptor;
 import giu.edu.cspg.OptimizedCloudletScheduler;
 import giu.edu.cspg.SimulationSettings;
+import giu.edu.cspg.VmAllocationPolicyCustom;
 import giu.edu.cspg.utils.ConfigLoader;
 import giu.edu.cspg.utils.SimulationResultUtils;
 import giu.edu.cspg.utils.WorkloadFileReader;
@@ -47,7 +46,7 @@ public final class HorizontalVmScalingLoadBalancer {
     private final CloudSimPlus simulation;
     private final SimulationSettings settings;
     private final Datacenter datacenter;
-    private final DatacenterBrokerSimple broker;
+    private final HorizontalVmScalingBroker broker;
     private final List<Vm> initialVmList;
     private List<Cloudlet> cloudletList;
     private final Map<Long, Double> cloudletArrivalTimeMap;
@@ -71,11 +70,10 @@ public final class HorizontalVmScalingLoadBalancer {
         LOGGER.info("Simulation settings dump\n{}", settings.printSettings());
 
         // 2. Setup Simulation Core Components
-        this.simulation = new CloudSimPlus();
-        this.simulation.terminateAt(settings.getMaxEpisodeLength());
+        this.simulation = new CloudSimPlus(0.1);
 
         this.datacenter = createDatacenter();
-        this.broker = new DatacenterBrokerSimple(simulation);
+        this.broker = new HorizontalVmScalingBroker(simulation);
         this.broker.setVmDestructionDelay(10000);
 
         // 3. Create Initial VMs (that are scalable)
@@ -117,9 +115,9 @@ public final class HorizontalVmScalingLoadBalancer {
         for (int i = 0; i < settings.getHostsCount(); i++) {
             hostList.add(createHost(i));
         }
-        // Use standard VmAllocationPolicySimple - scaling decisions are made by
+        // Use standard VmAllocationPolicyCustom - scaling decisions are made by
         // VMs/Broker
-        VmAllocationPolicySimple allocationPolicy = new VmAllocationPolicySimple();
+        VmAllocationPolicyCustom allocationPolicy = new VmAllocationPolicyCustom();
         Datacenter dc = new DatacenterSimple(simulation, hostList, allocationPolicy);
         dc.setCharacteristics(new DatacenterCharacteristicsSimple(0.75, 0.02, 0.001, 0.005));
         dc.setSchedulingInterval(5);
@@ -140,7 +138,7 @@ public final class HorizontalVmScalingLoadBalancer {
                 .setBwProvisioner(new ResourceProvisionerSimple())
                 .setVmScheduler(new VmSchedulerTimeShared());
 
-        host.enableUtilizationStats();
+        host.setStateHistoryEnabled(true);
 
         return host;
     }
@@ -207,12 +205,14 @@ public final class HorizontalVmScalingLoadBalancer {
     private void createHorizontalVmScaling(final Vm vm) {
         HorizontalVmScalingSimple horizontalScaling = new HorizontalVmScalingSimple();
 
-        // Supplier provides *new* VMs when scaling up (create another 'S' type VM)
-        horizontalScaling.setVmSupplier(() -> createVmInstance(SimulationSettings.SMALL));
+        // Supplier provides *new* VMs when scaling up
+        horizontalScaling.setVmSupplier(() -> createVmInstance(vm.getDescription()));
 
-        // Predicate checks if the VM is overloaded (e.g., >70% CPU)
+        // Predicate checks if the VM is overloaded (e.g., >70% CPU) OR if there are
+        // queued cloudlets due to PE limits
         final double overloadThreshold = 0.7;
-        horizontalScaling.setOverloadPredicate(v -> v.getCpuPercentUtilization() > overloadThreshold);
+        horizontalScaling.setOverloadPredicate(v -> v.getCpuPercentUtilization() > overloadThreshold ||
+                !v.getCloudletScheduler().getCloudletWaitingList().isEmpty());
 
         vm.setHorizontalScaling(horizontalScaling);
         LOGGER.trace("Attached Horizontal Scaling to VM {}", vm.getId());

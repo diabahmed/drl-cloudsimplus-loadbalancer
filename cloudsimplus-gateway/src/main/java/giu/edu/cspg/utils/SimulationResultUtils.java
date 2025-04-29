@@ -1,12 +1,11 @@
 package giu.edu.cspg.utils;
 
-import giu.edu.cspg.CloudletCost;
-import giu.edu.cspg.LoadBalancingBroker;
-import giu.edu.cspg.SimulationCore;
-import giu.edu.cspg.tables.CloudletsTableBuilderWithDetails;
-import giu.edu.cspg.tables.HostHistoryTableBuilderCsv;
-import giu.edu.cspg.tables.TableLogger;
-import giu.edu.cspg.tables.VmsTableBuilderWithDetails;
+import java.util.ArrayList;
+import java.util.Comparator;
+import static java.util.Comparator.comparingDouble;
+import static java.util.Comparator.comparingLong;
+import java.util.List;
+import java.util.Map;
 
 import org.cloudsimplus.brokers.DatacenterBrokerSimple;
 import org.cloudsimplus.builders.tables.AbstractTable;
@@ -17,16 +16,16 @@ import org.cloudsimplus.hosts.Host;
 import org.cloudsimplus.hosts.HostStateHistoryEntry;
 import org.cloudsimplus.vms.Vm;
 import org.cloudsimplus.vms.VmCost;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import static java.util.Comparator.comparingDouble;
-import static java.util.Comparator.comparingLong;
-import java.util.List;
-import java.util.Map;
+import giu.edu.cspg.CloudletCost;
+import giu.edu.cspg.LoadBalancingBroker;
+import giu.edu.cspg.SimulationCore;
+import giu.edu.cspg.tables.CloudletsTableBuilderWithDetails;
+import giu.edu.cspg.tables.HostHistoryTableBuilderCsv;
+import giu.edu.cspg.tables.TableLogger;
+import giu.edu.cspg.tables.VmsTableBuilderWithDetails;
 
 public class SimulationResultUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(SimulationResultUtils.class.getSimpleName());
@@ -145,10 +144,12 @@ public class SimulationResultUtils {
 
         double totalCloudletCost = 0.0;
         double totalVmCost = 0.0;
+        double totalUtilizedVmCost = 0.0;
         double totalCompletionTime = 0.0;
         double totalVmCpuUtilizationSum = 0.0;
         int finishedCount = finishedCloudlets.size();
         int utilizedVmCount = 0;
+        int vmCount = 0;
 
         for (Cloudlet cloudlet : finishedCloudlets) {
             CloudletCost cloudletCost = new CloudletCost(cloudlet, arrivalTimeMap);
@@ -165,16 +166,18 @@ public class SimulationResultUtils {
         for (Vm vm : vmList) {
             if (vm.hasStarted() || vm.isFinished()) {
                 if (vm.getCpuUtilizationStats().getMean() > 0) {
-                    totalVmCost += new VmCost(vm).getTotalCost();
+                    totalUtilizedVmCost += new VmCost(vm).getTotalCost();
                     totalVmCpuUtilizationSum += vm.getCpuUtilizationStats().getMean() * 100.0;
                     utilizedVmCount++;
                 }
+                totalVmCost += new VmCost(vm).getTotalCost();
+                vmCount++;
             }
         }
 
         LOGGER.info("Total cost of executing {} Cloudlets = ${}", finishedCount,
                 String.format("%.2f", totalCloudletCost));
-        LOGGER.info("Total cost of running {} VMs = ${}", utilizedVmCount, String.format("%.2f", totalVmCost));
+        LOGGER.info("Total cost of running {} VMs = ${}", vmCount, String.format("%.2f", totalVmCost));
 
         if (finishedCount > 0) {
             LOGGER.info("Mean cost per Cloudlet = ${}", String.format("%.2f", totalCloudletCost / finishedCount));
@@ -185,7 +188,8 @@ public class SimulationResultUtils {
         }
 
         if (utilizedVmCount > 0) {
-            LOGGER.info("Mean cost per Utilized VM = ${}", String.format("%.2f", totalVmCost / utilizedVmCount));
+            LOGGER.info("Mean cost per Utilized VM = ${}", String.format("%.2f",
+                    totalUtilizedVmCost / utilizedVmCount));
             LOGGER.info("Mean CPU Utilization of Utilized VMs = {}%",
                     String.format("%.2f", totalVmCpuUtilizationSum / utilizedVmCount));
         } else {
