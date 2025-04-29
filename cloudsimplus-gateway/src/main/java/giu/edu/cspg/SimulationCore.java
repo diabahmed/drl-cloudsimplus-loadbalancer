@@ -488,4 +488,8 @@ public final class SimulationCore {
 
         return true; // Destruction initiated
     }
+
+    public int getVmPoolSize() {
+        return vmPool.size();
+    }
 }
