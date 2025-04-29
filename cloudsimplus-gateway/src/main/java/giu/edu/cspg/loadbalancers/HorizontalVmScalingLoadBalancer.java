@@ -8,6 +8,7 @@ import java.util.PriorityQueue;
 import java.util.stream.Collectors;
 
 import org.cloudsimplus.autoscaling.HorizontalVmScalingSimple;
+import org.cloudsimplus.brokers.DatacenterBrokerSimple;
 import org.cloudsimplus.cloudlets.Cloudlet;
 import org.cloudsimplus.core.CloudSimPlus;
 import org.cloudsimplus.datacenters.Datacenter;
@@ -46,7 +47,7 @@ public final class HorizontalVmScalingLoadBalancer {
     private final CloudSimPlus simulation;
     private final SimulationSettings settings;
     private final Datacenter datacenter;
-    private final HorizontalVmScalingBroker broker;
+    private final DatacenterBrokerSimple broker;
     private final List<Vm> initialVmList;
     private List<Cloudlet> cloudletList;
     private final Map<Long, Double> cloudletArrivalTimeMap;
@@ -73,7 +74,7 @@ public final class HorizontalVmScalingLoadBalancer {
         this.simulation = new CloudSimPlus(0.1);
 
         this.datacenter = createDatacenter();
-        this.broker = new HorizontalVmScalingBroker(simulation);
+        this.broker = new DatacenterBrokerSimple(simulation);
         this.broker.setVmDestructionDelay(10000);
 
         // 3. Create Initial VMs (that are scalable)

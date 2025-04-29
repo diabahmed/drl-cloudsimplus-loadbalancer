@@ -19,7 +19,7 @@ public class LeastLoadedLoadBalancer {
     private static final String EXPERIMENT_ID = "experiment_1"; // Or load from args/env var
 
     public static void main(String[] args) {
-        new LeastLoadedLoadBalancer().run(); // Create instance to manage index state
+        new LeastLoadedLoadBalancer().run();
     }
 
     public void run() {
