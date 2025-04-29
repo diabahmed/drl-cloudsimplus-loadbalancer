@@ -10,7 +10,7 @@ import org.cloudsimplus.schedulers.MipsShare;
 import org.cloudsimplus.schedulers.cloudlet.CloudletSchedulerAbstract;
 import org.cloudsimplus.schedulers.cloudlet.CloudletSchedulerSpaceShared;
 
-class OptimizedCloudletScheduler extends CloudletSchedulerSpaceShared {
+public class OptimizedCloudletScheduler extends CloudletSchedulerSpaceShared {
 
     @Override
     protected double cloudletSubmitInternal(final CloudletExecution cle, final double fileTransferTime) {

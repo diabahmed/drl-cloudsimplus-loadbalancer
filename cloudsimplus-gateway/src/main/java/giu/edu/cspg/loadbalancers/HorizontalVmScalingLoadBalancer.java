@@ -21,7 +21,6 @@ import org.cloudsimplus.provisioners.PeProvisionerSimple;
 import org.cloudsimplus.provisioners.ResourceProvisionerSimple;
 import org.cloudsimplus.resources.Pe;
 import org.cloudsimplus.resources.PeSimple;
-import org.cloudsimplus.schedulers.cloudlet.CloudletSchedulerSpaceShared;
 import org.cloudsimplus.schedulers.vm.VmSchedulerTimeShared;
 import org.cloudsimplus.vms.Vm;
 import org.cloudsimplus.vms.VmSimple;
@@ -29,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import giu.edu.cspg.CloudletDescriptor;
+import giu.edu.cspg.OptimizedCloudletScheduler;
 import giu.edu.cspg.SimulationSettings;
 import giu.edu.cspg.utils.ConfigLoader;
 import giu.edu.cspg.utils.SimulationResultUtils;
@@ -39,7 +39,7 @@ import giu.edu.cspg.utils.WorkloadFileReader;
  * built-in Horizontal VM Scaling mechanism.
  * It loads configuration from config.yml and uses common result reporting.
  */
-public class HorizontalVmScalingLoadBalancer {
+public final class HorizontalVmScalingLoadBalancer {
     private static final Logger LOGGER = LoggerFactory.getLogger(HorizontalVmScalingLoadBalancer.class.getSimpleName());
     private static final String CONFIG_FILE = "config.yml"; // Or load from args/env var
     private static final String EXPERIMENT_ID = "experiment_1"; // Or load from args/env var
@@ -79,7 +79,7 @@ public class HorizontalVmScalingLoadBalancer {
         this.broker.setVmDestructionDelay(10000);
 
         // 3. Create Initial VMs (that are scalable)
-        this.initialVmList = createInitialScalableVms(settings.getInitialSVmCount());
+        this.initialVmList = createInitialVmFleet(settings);
         this.broker.submitVmList(initialVmList);
 
         // 4. Load Workload
@@ -145,17 +145,40 @@ public class HorizontalVmScalingLoadBalancer {
         return host;
     }
 
-    /** Creates the initial list of VMs, each equipped with horizontal scaling. */
-    private List<Vm> createInitialScalableVms(int initialVmCount) {
-        LOGGER.info("Creating {} initial scalable VMs (Type: {})", initialVmCount, SimulationSettings.SMALL);
-        List<Vm> newList = new ArrayList<>(initialVmCount);
-        vmIdCounter = 0;
-        for (int i = 0; i < initialVmCount; i++) {
-            // Create initial VMs as 'Small' type for this example
+    /**
+     * Creates the initial fixed fleet of VMs based on counts in SimulationSettings.
+     * Resets the global VM ID counter.
+     *
+     * @param settings Simulation settings containing initial VM counts and specs.
+     * @param vmPool   The list to populate with created initial VMs.
+     */
+    public List<Vm> createInitialVmFleet(SimulationSettings settings) {
+        List<Vm> newList = new ArrayList<>();
+        vmIdCounter = 0; // Reset VM ID counter for this simulation instance
+
+        int[] initialCounts = settings.getInitialVmCounts(); // [S, M, L] counts
+        LOGGER.info("Creating initial VM fleet: S={}, M={}, L={}",
+                initialCounts[0], initialCounts[1], initialCounts[2]);
+
+        // Create Small VMs
+        for (int i = 0; i < initialCounts[0]; i++) {
             Vm vm = createVmInstance(SimulationSettings.SMALL);
             createHorizontalVmScaling(vm); // Attach scaling mechanism
             newList.add(vm);
         }
+        // Create Medium VMs
+        for (int i = 0; i < initialCounts[1]; i++) {
+            Vm vm = createVmInstance(SimulationSettings.MEDIUM);
+            createHorizontalVmScaling(vm); // Attach scaling mechanism
+            newList.add(vm);
+        }
+        // Create Large VMs
+        for (int i = 0; i < initialCounts[2]; i++) {
+            Vm vm = createVmInstance(SimulationSettings.LARGE);
+            createHorizontalVmScaling(vm); // Attach scaling mechanism
+            newList.add(vm);
+        }
+
         return newList;
     }
 
@@ -169,7 +192,8 @@ public class HorizontalVmScalingLoadBalancer {
 
         Vm vm = new VmSimple(vmIdCounter++, settings.getHostPeMips(), vmPes)
                 .setRam(vmRam).setBw(vmBw).setSize(vmStorage)
-                .setCloudletScheduler(new CloudletSchedulerSpaceShared());
+                .setCloudletScheduler(new OptimizedCloudletScheduler())
+                .setDescription(type);
 
         vm.setSubmissionDelay(settings.getVmStartupDelay());
         vm.setShutDownDelay(settings.getVmShutdownDelay());
