@@ -1,17 +1,16 @@
 package giu.edu.cspg.utils;
 
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.constructor.SafeConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Map;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.yaml.snakeyaml.Yaml;
 
 public class ConfigLoader {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConfigLoader.class.getSimpleName());
@@ -30,7 +29,7 @@ public class ConfigLoader {
     public static Map<String, Object> loadConfig(String configFilePath, String experimentId) {
         String path = (configFilePath == null) ? DEFAULT_CONFIG_PATH : configFilePath;
         LOGGER.info("Loading configuration from: {} for experiment: {}", path, experimentId);
-        Yaml yaml = new Yaml(new SafeConstructor(null));
+        Yaml yaml = new Yaml();
         try (InputStream inputStream = Files.newInputStream(Paths.get(path))) {
             Map<String, Object> fullConfig = yaml.load(inputStream);
             if (fullConfig == null) {

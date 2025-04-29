@@ -62,19 +62,57 @@ common:
 # --- Experiment-Specific Overrides ---
 
 experiment_1:
-  experiment_name: "Exp1_MaskPPO_SWFShort_DefRew_10H_211Init_Seed42" # Descriptive name for this run
+  simulation_name: "test1"
   seed: 42
+
+  # Host (Server) Configuration
+  hosts_count: 8
+  host_pes: 16
+  host_pe_mips: 10000 # 10k MIPS per PE
+  host_ram: 65536 # 64 GB
+  host_bw: 50000 # 50 Gbps
+  host_storage: 100000 # 1 TB
+
+  # VM Configuration (Small Base m5.large)
+  small_vm_pes: 2
+  small_vm_ram: 8192 # 8 GB
+  small_vm_bw: 10000 # 10 Gbps
+  small_vm_storage: 4000 # 4 GB
+
+  # VM Size Multipliers
+  medium_vm_multiplier: 2 # -> 4 PEs
+  large_vm_multiplier: 4 # -> 8 PEs
+
+  # Initial VM Counts
   initial_s_vm_count: 2
   initial_m_vm_count: 1
   initial_l_vm_count: 1
+
+  # Workload Configuration
+  workload_mode: CSV
+  cloudlet_trace_file: traces/hill_max30.csv
+  workload_reader_mips: 50000 # Should match Host MIPS usually
+
+  # Simulation Timing
+  simulation_timestep: 1.0 # RL step duration
+  min_time_between_events: 0.1
+  vm_startup_delay: 0.0
+  vm_shutdown_delay: 0.0
+
+  # Episode Control
+  max_episode_length: 10000 # Limit simulation steps for testing
+
+  # Reward Function Coefficients
+  reward_wait_time_coef: 0.1
+  reward_unutilization_coef: 0.85
+  reward_cost_coef: 0.5
+  reward_queue_penalty_coef: 0.05
+  reward_invalid_action_coef: 1.0
+
   timesteps: 100000 # Total training steps for this experiment
-  # Override reward weights for specific tuning if needed
-  # reward_unutilization_coef: 0.6
-  # reward_cost_coef: 0.4
-  # cloudlet_trace_file: "traces/ANL-Intrepid-2009-1.swf" # Use a different trace
 
 experiment_2:
-  experiment_name: "Exp2_MaskPPO_SWFShort_MoreUtilRew_10H_321Init_Seed123"
+  simulation_name: "Exp2_MaskPPO_SWFShort_MoreUtilRew_10H_321Init_Seed123"
   seed: 123
   initial_s_vm_count: 3
   initial_m_vm_count: 2
