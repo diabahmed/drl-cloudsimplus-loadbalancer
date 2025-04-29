@@ -1,11 +1,13 @@
 package giu.edu.cspg.loadbalancers;
 
-import giu.edu.cspg.CloudletDescriptor;
-import giu.edu.cspg.SimulationSettings;
-import giu.edu.cspg.utils.ConfigLoader;
-import giu.edu.cspg.utils.SimulationResultUtils;
-import giu.edu.cspg.utils.WorkloadFileReader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.PriorityQueue;
+import java.util.stream.Collectors;
 
+import org.cloudsimplus.allocationpolicies.VmAllocationPolicySimple;
 import org.cloudsimplus.autoscaling.HorizontalVmScalingSimple;
 import org.cloudsimplus.brokers.DatacenterBrokerSimple;
 import org.cloudsimplus.cloudlets.Cloudlet;
@@ -22,17 +24,14 @@ import org.cloudsimplus.schedulers.cloudlet.CloudletSchedulerSpaceShared;
 import org.cloudsimplus.schedulers.vm.VmSchedulerTimeShared;
 import org.cloudsimplus.vms.Vm;
 import org.cloudsimplus.vms.VmSimple;
-import org.cloudsimplus.allocationpolicies.VmAllocationPolicySimple;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.PriorityQueue;
-import java.util.stream.Collectors;
+import giu.edu.cspg.CloudletDescriptor;
+import giu.edu.cspg.SimulationSettings;
+import giu.edu.cspg.utils.ConfigLoader;
+import giu.edu.cspg.utils.SimulationResultUtils;
+import giu.edu.cspg.utils.WorkloadFileReader;
 
 /**
  * An example simulating a load balancing scenario using CloudSim Plus's
@@ -75,7 +74,7 @@ public class HorizontalVmScalingLoadBalancer {
 
         this.datacenter = createDatacenter();
         this.broker = new DatacenterBrokerSimple(simulation);
-        this.broker.setVmDestructionDelay(settings.getVmShutdownDelay());
+        this.broker.setVmDestructionDelay(10000);
 
         // 3. Create Initial VMs (that are scalable)
         this.initialVmList = createInitialScalableVms(settings.getInitialSVmCount());
