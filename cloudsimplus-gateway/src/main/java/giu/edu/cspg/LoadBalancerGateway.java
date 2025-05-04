@@ -366,11 +366,9 @@ public class LoadBalancerGateway {
         double[] hostLoads = new double[numHosts];
         double[] hostRamUsageRatio = new double[numHosts];
 
-        double[] vmLoads = new double[maxPotentialVms]; // Padded (-1=off)
-        int[] vmTypes = new int[maxPotentialVms]; // Padded (-1=off)
+        double[] vmLoads = new double[maxPotentialVms]; // Padded (0=off)
+        int[] vmTypes = new int[maxPotentialVms]; // Padded (0=off)
         int[] vmHostMap = new int[maxPotentialVms]; // Padded (-1=off)
-        Arrays.fill(vmLoads, -1); // Default to -1
-        Arrays.fill(vmTypes, -1); // Default to -1
         Arrays.fill(vmHostMap, -1); // Default to -1
 
         // Populate Host data (assuming host IDs are 0 to numHosts-1)
