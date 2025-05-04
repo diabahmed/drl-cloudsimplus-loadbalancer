@@ -155,8 +155,8 @@ public class SimulationStepInfo {
         map.put("reward_cost", this.rewardCostComponent);
         map.put("reward_queue_penalty", this.rewardQueuePenaltyComponent);
         map.put("reward_invalid_action", this.rewardInvalidActionComponent);
-        map.put("observation_tree_array", gson.toJson(this.getObservationTreeArrayAsJson()));
-        map.put("completed_cloudlet_wait_times", gson.toJson(this.getCompletedCloudletWaitTimesAsJson()));
+        map.put("observation_tree_array", this.getObservationTreeArrayAsJson());
+        map.put("completed_cloudlet_wait_times", this.getCompletedCloudletWaitTimesAsJson());
         return map;
     }
 
