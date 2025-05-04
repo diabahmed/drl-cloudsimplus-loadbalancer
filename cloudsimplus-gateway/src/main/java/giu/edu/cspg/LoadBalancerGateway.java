@@ -247,7 +247,10 @@ public class LoadBalancerGateway {
                 this.rewardWaitTimeComponent,
                 this.rewardUnutilizationComponent,
                 this.rewardCostComponent,
-                this.rewardQueuePenaltyComponent, this.rewardInvalidActionComponent);
+                this.rewardQueuePenaltyComponent, this.rewardInvalidActionComponent,
+                getInfrastructureObservation(),
+                simulationCore.getBroker()
+                        .getFinishedWaitTimesLastStep(simulationCore.getClock()));
 
         LOGGER.debug("Step {} finished. Reward: {}, Term: {}, Trunc: {}, Info: {}", currentStep, totalReward,
                 terminated, truncated, stepInfo);

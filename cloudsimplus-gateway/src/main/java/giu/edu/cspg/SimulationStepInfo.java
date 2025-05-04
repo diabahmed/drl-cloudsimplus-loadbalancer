@@ -1,12 +1,17 @@
 package giu.edu.cspg;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import com.google.gson.Gson;
 
 /**
  * Contains auxiliary information about the outcome of a simulation step.
  */
 public class SimulationStepInfo {
+    private final Gson gson = new Gson();
     // Action Outcome Flags
     private final boolean assignmentSuccess;
     private final boolean createVmAttempted; // Whether a create action was tried
@@ -21,6 +26,7 @@ public class SimulationStepInfo {
 
     // Simulation Context
     private final double currentClock;
+    private final int[] observationTreeArray;
 
     // Reward Components
     private final double rewardWaitTimeComponent;
@@ -28,15 +34,15 @@ public class SimulationStepInfo {
     private final double rewardCostComponent;
     private final double rewardQueuePenaltyComponent;
     private final double rewardInvalidActionComponent;
-    // Optional: Could include list of wait times for cloudlets finished this step
-    // private final List<Double> completedCloudletWaitTimes;
+    private final List<Double> completedCloudletWaitTimes;
 
     // Constructor with all fields
     public SimulationStepInfo(boolean assignmentSuccess, boolean createVmAttempted, boolean createVmSuccess,
             boolean destroyVmAttempted, boolean destroyVmSuccess, boolean invalidActionTaken, int hostAffectedId,
             int coresChanged,
             double currentClock, double rewardWaitTimeComponent, double rewardUnutilizationComponent,
-            double rewardCostComponent, double rewardQueuePenaltyComponent, double rewardInvalidActionComponent) {
+            double rewardCostComponent, double rewardQueuePenaltyComponent, double rewardInvalidActionComponent,
+            int[] observationTreeArray, List<Double> completedCloudletWaitTimes) {
         this.assignmentSuccess = assignmentSuccess;
         this.createVmAttempted = createVmAttempted;
         this.createVmSuccess = createVmSuccess;
@@ -51,12 +57,15 @@ public class SimulationStepInfo {
         this.rewardCostComponent = rewardCostComponent;
         this.rewardQueuePenaltyComponent = rewardQueuePenaltyComponent;
         this.rewardInvalidActionComponent = rewardInvalidActionComponent;
+        this.observationTreeArray = observationTreeArray;
+        this.completedCloudletWaitTimes = completedCloudletWaitTimes;
     }
 
     // Simplified constructor for SimulationResetResult where action outcomes aren't
     // relevant
     public SimulationStepInfo(double currentClock) {
-        this(false, false, false, false, false, false, -1, 0, currentClock, 0, 0, 0, 0, 0);
+        this(false, false, false, false, false, false, -1, 0, currentClock, 0, 0, 0, 0, 0, new int[1],
+                new ArrayList<>());
     }
 
     // --- Getters ---
@@ -116,6 +125,14 @@ public class SimulationStepInfo {
         return rewardInvalidActionComponent;
     }
 
+    public String getObservationTreeArrayAsJson() {
+        return gson.toJson(observationTreeArray);
+    }
+
+    public String getCompletedCloudletWaitTimesAsJson() {
+        return gson.toJson(completedCloudletWaitTimes);
+    }
+
     /**
      * Converts the info into a Map for easy translation to a Python dictionary by
      * Py4J.
@@ -138,6 +155,8 @@ public class SimulationStepInfo {
         map.put("reward_cost", this.rewardCostComponent);
         map.put("reward_queue_penalty", this.rewardQueuePenaltyComponent);
         map.put("reward_invalid_action", this.rewardInvalidActionComponent);
+        map.put("observation_tree_array", this.getObservationTreeArrayAsJson());
+        map.put("completed_cloudlet_wait_times", this.getCompletedCloudletWaitTimesAsJson());
         return map;
     }
 
