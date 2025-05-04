@@ -3,6 +3,7 @@ package giu.edu.cspg;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -12,12 +13,15 @@ import org.cloudsimplus.vms.Vm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.gson.Gson;
+
 import giu.edu.cspg.utils.SimulationResultUtils;
 import py4j.GatewayServer;
 
 public class LoadBalancerGateway {
     private static final Logger LOGGER = LoggerFactory.getLogger(LoadBalancerGateway.class.getSimpleName());
     private static final DecimalFormat df = new DecimalFormat("#.###");
+    private static final Gson gson = new Gson();
 
     private SimulationCore simulationCore;
     private SimulationSettings settings;
@@ -487,6 +491,64 @@ public class LoadBalancerGateway {
         sb.append("--------------------\n");
 
         return sb.toString();
+    }
+
+    /**
+     * Collects current state information suitable for rendering and returns it as a
+     * JSON string.
+     * 
+     * @return JSON string representing the current renderable state.
+     */
+    public String getRenderInfoAsJson() {
+        if (simulationCore == null) {
+            // Return empty JSON object or error message
+            return "{}"; // Or: "{\"error\": \"Simulation not initialized.\"}"
+        }
+        try {
+            ObservationState state = getCurrentState();
+            // Create a Map to hold the data for JSON conversion
+            Map<String, Object> renderData = new HashMap<>();
+            renderData.put("time", simulationCore.getClock());
+            renderData.put("step", this.currentStep);
+            renderData.put("actual_hosts", state.getActualHostCount());
+            renderData.put("actual_vms", state.getActualVmCount());
+            renderData.put("waiting_cloudlets", state.getWaitingCloudlets());
+            renderData.put("next_cloudlet_pes", state.getNextCloudletPes());
+
+            // Add host data (only for actual hosts)
+            List<Map<String, Object>> hostInfoList = new ArrayList<>();
+            for (int i = 0; i < state.getActualHostCount(); i++) {
+                Map<String, Object> hostData = new HashMap<>();
+                hostData.put("id", i);
+                hostData.put("cpu_load_percent", state.getHostLoads()[i]);
+                hostData.put("ram_usage_ratio", state.getHostRamUsageRatio()[i]);
+                hostInfoList.add(hostData);
+            }
+            renderData.put("hosts", hostInfoList);
+
+            // Add VM data (only for active VMs, using ID as key or in a list)
+            List<Map<String, Object>> vmInfoList = new ArrayList<>();
+            for (int i = 0; i < maxPotentialVms; i++) { // Iterate through all potential slots
+                if (state.getVmTypes()[i] > 0) { // If VM exists in this slot
+                    Map<String, Object> vmData = new HashMap<>();
+                    vmData.put("id", i); // Use the index as the VM ID
+                    vmData.put("type_code", state.getVmTypes()[i]); // 1=S, 2=M, 3=L
+                    vmData.put("host_id", state.getVmHostMap()[i]);
+                    vmData.put("cpu_load_percent", state.getVmLoads()[i]);
+                    vmInfoList.add(vmData);
+                }
+            }
+            renderData.put("vms", vmInfoList);
+
+            // Add Tree Array if desired
+            renderData.put("infrastructure_tree", state.getInfrastructureObservation());
+
+            return gson.toJson(renderData); // Convert map to JSON
+
+        } catch (Exception e) {
+            LOGGER.error("Error generating render info JSON", e);
+            return "{\"error\": \"Failed to generate render info: " + e.getMessage().replace("\"", "'") + "\"}";
+        }
     }
 
     /**
