@@ -1,7 +1,7 @@
 FROM python:3.13-alpine
 
-RUN pip3 install --upgrade pip==24.3.1
-RUN pip3 install tensorboard==2.18.0
+RUN pip3 install --upgrade pip==25.1.1
+RUN pip3 install tensorboard
 
 RUN apt-get update \
     && apt-get purge --auto-remove -yqq \
