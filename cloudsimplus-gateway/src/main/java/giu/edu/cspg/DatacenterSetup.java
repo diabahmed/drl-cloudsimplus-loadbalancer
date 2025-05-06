@@ -41,7 +41,7 @@ public class DatacenterSetup {
         int numHosts = settings.getHostsCount();
         LOGGER.info("Creating {} hosts...", numHosts);
         for (int i = 0; i < numHosts; i++) {
-            hostList.add(createHost(settings, i));
+            hostList.add(createHost(settings));
         }
 
         LOGGER.info("Creating Datacenter with {} hosts and {} allocation policy.",
@@ -54,10 +54,10 @@ public class DatacenterSetup {
     /**
      * Creates a single Host instance based on settings.
      */
-    private static Host createHost(SimulationSettings settings, int index) {
+    private static Host createHost(SimulationSettings settings) {
         final List<Pe> peList = new ArrayList<>();
         long hostPeMips = settings.getHostPeMips();
-        for (int i = 0; i < settings.getHostPes() + (index * 2); i++) {
+        for (int i = 0; i < settings.getHostPes(); i++) {
             peList.add(new PeSimple(hostPeMips, new PeProvisionerSimple()));
         }
 
