@@ -199,23 +199,36 @@ public class LoadBalancerGateway {
             case 3 -> {
                 // Destroy VM
                 destroyAttempted = true;
-                // Need to find the VM first to get its details before destroying
-                Vm vmToDestroy = simulationCore.getBroker().getVmExecList().get(targetVmId);
-                if (vmToDestroy != Vm.NULL && vmToDestroy.isCreated() && !vmToDestroy.isFailed()) {
-                    hostAffectedId = (int) vmToDestroy.getHost().getId(); // Get host before destroy request
-                    coresChanged = -(int) vmToDestroy.getPesNumber(); // Cores removed (negative)
-                    destroySuccess = simulationCore.destroyVmById(targetVmId); // Initiate destruction
-                    if (!destroySuccess) { // Should ideally not happen if checks pass
-                        LOGGER.warn("Destroy VM {} initiation failed unexpectedly.", targetVmId);
-                        wasInvalidAction = true;
-                        hostAffectedId = -1; // Reset if initiation failed
-                        coresChanged = 0;
-                    }
-                } else {
-                    LOGGER.warn(
-                            "Destroy VM {} failed (VM likely doesn't exist or already stopped). Invalid action taken.",
-                            targetVmId);
+                if (simulationCore.getBroker().getVmExecList().isEmpty()) {
+                    LOGGER.warn("Destroy VM action taken, but no VMs are running. Invalid action.");
                     wasInvalidAction = true;
+                }
+                // Need to find the VM first to get its details before destroying
+                try {
+                    Vm vmToDestroy = simulationCore.getBroker().getVmExecList().get(targetVmId);
+                    if (vmToDestroy != Vm.NULL && vmToDestroy.isCreated() && !vmToDestroy.isFailed()) {
+                        hostAffectedId = (int) vmToDestroy.getHost().getId(); // Get host before destroy request
+                        coresChanged = -(int) vmToDestroy.getPesNumber(); // Cores removed (negative)
+                        destroySuccess = simulationCore.destroyVmById(targetVmId); // Initiate destruction
+                        if (!destroySuccess) { // Should ideally not happen if checks pass
+                            LOGGER.warn("Destroy VM {} initiation failed unexpectedly.", targetVmId);
+                            wasInvalidAction = true;
+                            hostAffectedId = -1; // Reset if initiation failed
+                            coresChanged = 0;
+                        }
+                    } else {
+                        LOGGER.warn(
+                                "Destroy VM {} failed (VM likely doesn't exist or already stopped). Invalid action taken.",
+                                targetVmId);
+                        wasInvalidAction = true;
+                    }
+                } catch (IndexOutOfBoundsException e) {
+                    // Handle case where targetVmId is out of bounds for the VM list
+                    LOGGER.warn("Destroy VM action taken with invalid VM ID {}. Invalid action taken.", targetVmId);
+                    wasInvalidAction = true;
+                } catch (Exception e) {
+                    LOGGER.error("Unexpected error during Destroy VM action: {}", e.getMessage(), e);
+                    wasInvalidAction = true; // Treat as invalid if any unexpected error occurs
                 }
             }
             default -> {
