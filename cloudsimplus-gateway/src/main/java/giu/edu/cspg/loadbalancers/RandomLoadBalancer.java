@@ -34,6 +34,7 @@ public class RandomLoadBalancer {
 
         // 2. Create Simulation Core (Handles setup based on settings)
         SimulationCore simulationCore = new SimulationCore(settings);
+        simulationCore.getSimulation().terminateAt(settings.getMaxEpisodeLength());
         LoadBalancingBroker broker = simulationCore.getBroker();
 
         long seed = params.containsKey("seed") ? ((Number) params.get("seed")).longValue() : 1;

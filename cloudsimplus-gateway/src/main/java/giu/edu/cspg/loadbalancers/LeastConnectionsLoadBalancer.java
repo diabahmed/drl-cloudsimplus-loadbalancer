@@ -39,6 +39,7 @@ public class LeastConnectionsLoadBalancer {
 
         // 2. Create Simulation Core
         SimulationCore simulationCore = new SimulationCore(settings);
+        simulationCore.getSimulation().terminateAt(settings.getMaxEpisodeLength());
         LoadBalancingBroker broker = simulationCore.getBroker();
 
         long seed = params.containsKey("seed") ? ((Number) params.get("seed")).longValue() : 1;

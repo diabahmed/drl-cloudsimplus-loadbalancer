@@ -72,6 +72,7 @@ public final class HorizontalVmScalingLoadBalancer {
 
         // 2. Setup Simulation Core Components
         this.simulation = new CloudSimPlus(0.1);
+        this.simulation.terminateAt(this.settings.getMaxEpisodeLength());
 
         this.datacenter = createDatacenter();
         this.broker = new DatacenterBrokerSimple(simulation);

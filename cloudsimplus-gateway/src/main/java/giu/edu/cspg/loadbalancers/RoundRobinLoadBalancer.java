@@ -38,6 +38,7 @@ public class RoundRobinLoadBalancer {
 
         // 2. Create Simulation Core
         SimulationCore simulationCore = new SimulationCore(settings);
+        simulationCore.getSimulation().terminateAt(settings.getMaxEpisodeLength());
         LoadBalancingBroker broker = simulationCore.getBroker();
 
         // 3. Main Simulation Loop
