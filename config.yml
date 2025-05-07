@@ -1,125 +1,105 @@
-# config.yml - Configuration for DRL Load Balancing and VM Scaling Simulation
+# ===================================================================
+# config.yml - Default Configuration for DRL Load Balancing/Scaling
+# ===================================================================
 
 common:
-  # --- Simulation Control ---
-  simulation_name: "HybridLBScaling" # Base name for logs/results
+  # --- Simulation Identification ---
+  simulation_name: "DefaultSimRun" # Used in logging and result file names
+
+  # --- Simulation Control & Timing ---
   simulation_timestep: 1.0 # Duration of each RL agent step (seconds)
-  min_time_between_events: 0.01 # CloudSim internal minimum time granularity
-  max_episode_length: 1000 # Max steps per episode before truncation
+  min_time_between_events: 0.1 # CloudSim internal minimum time granularity (s)
+  max_episode_length: 500 # Max steps per episode before truncation
 
   # --- Host Configuration ---
-  hosts_count: 10 # Number of physical hosts
+  hosts_count: 32 # Number of physical hosts/servers
   host_pes: 16 # Processing Elements (cores) per host
-  host_pe_mips: 2000 # MIPS capacity per PE (core)
+  host_pe_mips: 50000 # MIPS capacity per PE (core)
   host_ram: 65536 # Host RAM in MB (64 GB)
-  host_bw: 10000 # Host Bandwidth in Mbps (10 Gbps)
-  host_storage: 1000000 # Host Storage in MB (1 TB)
+  host_bw: 50000 # Host Bandwidth in Mbps (50 Gbps)
+  host_storage: 100000 # Host Storage in MB (100 GB)
 
   # --- VM Configuration (Base 'S' & Multipliers) ---
   small_vm_pes: 2 # PEs for base 'S' VM (like m5a.large)
   small_vm_ram: 8192 # RAM (MB) for 'S' VM (8 GB)
   small_vm_bw: 1000 # Bandwidth (Mbps) for 'S' VM (1 Gbps)
-  small_vm_storage: 20000 # Storage (MB) for 'S' VM (20 GB)
-  medium_vm_multiplier: 2 # 'M' VM = 2 * 'S' PEs & RAM (e.g., 4 PEs, 16GB RAM)
-  large_vm_multiplier: 4 # 'L' VM = 4 * 'S' PEs & RAM (e.g., 8 PEs, 32GB RAM)
-  vm_startup_delay: 56.0 # Time (sec) for VM to boot
-  vm_shutdown_delay: 10.0 # Time (sec) broker waits before destroying idle VM (if agent doesn't destroy first)
+  small_vm_storage: 4000 # Storage (MB) for 'S' VM (4 GB)
+  medium_vm_multiplier: 2 # 'M' VM PEs/RAM = multiplier * 'S' (e.g., 4 PEs, 16GB RAM)
+  large_vm_multiplier: 4 # 'L' VM PEs/RAM = multiplier * 'S' (e.g., 8 PEs, 32GB RAM)
+
+  # --- Initial VM Fleet ---
+  initial_s_vm_count: 20 # Start with 0 Small VMs
+  initial_m_vm_count: 10 # Start with 0 Medium VM
+  initial_l_vm_count: 5 # Start with 0 Large VMs
+
+  # --- VM Lifecycle Delays ---
+  vm_startup_delay: 0.0 # Time (sec) for VM to boot (reduced for faster testing)
+  vm_shutdown_delay: 0.0 # Time (sec) before idle VM is destroyed by broker (agent action is immediate)
 
   # --- Workload Configuration ---
   workload_mode: "SWF" # Options: "SWF", "CSV"
-  cloudlet_trace_file: "traces/LLNL-Atlas-2006-2.1-cln-short.swf" # Relative path inside container/mounted volume
-  max_cloudlets_to_create_from_workload_file: 1000 # Limit lines read (e.g., 1000, or 2147483647 for practically no limit)
-  workload_reader_mips: 2000 # Reference MIPS for SWF runtime->MI calc (should match host/vm MIPS usually)
+  cloudlet_trace_file: "traces/LLNL-Atlas-2006-2.1-cln-test.swf" # Default trace file path (relative to resources)
+  max_cloudlets_to_create_from_workload_file: 2147483647 # Limit lines read for faster testing (Set to MAX_INT for full file)
+  workload_reader_mips: 50000 # MIPS ref for SWF length calc (match host_pe_mips)
+  split_large_cloudlets: true # Split cloudlets requesting more PEs than max_cloudlet_pes?
+  max_cloudlet_pes: 8 # Max PEs a single (split) cloudlet can request (e.g., = large VM PEs)
 
   # --- Costing Configuration ---
-  small_vm_hourly_cost: 0.086 # Approx AWS m5a.large hourly cost
-  paying_for_the_full_hour: false # Billing model: false=pay per second, true=pay minimum 1 hour
+  small_vm_hourly_cost: 0.086 # Approx AWS m5a.large hourly cost ($)
+  paying_for_the_full_hour: false # Billing model (false = per-second approx)
 
   # --- Reward Weights ---
-  reward_wait_time_coef: 0.0 # Coefficient for penalty based on avg cloudlet wait time (IMPLEMENT LATER)
-  reward_unutilization_coef: 0.5 # Coefficient for penalty based on avg VM CPU *un*utilization (1 - util)
-  reward_cost_coef: 0.3 # Coefficient for penalty based on allocated_cores/total_cores ratio
-  reward_queue_penalty_coef: 0.2 # Coefficient for penalty based on number of waiting cloudlets
-  reward_invalid_action_coef: 1.0 # Flat penalty for taking an invalid action
+  # Note: Tune these weights heavily based on experimental results!
+  reward_wait_time_coef: 0.75 # Penalty for FINISHED CLOUDLETS WAIT TIME (Avg per step)
+  reward_throughput_coef: 0.85 # Reward for THROUGHPUT (Avg Cloudlets Finished per step)
+  reward_unutilization_coef: 0.25 # Penalty for avg VM CPU UNUTILIZATION (1.0 - utilization)
+  reward_cost_coef: 0.35 # Penalty for INFRASTRUCTURE COST (Allocated Cores / Total Cores Ratio)
+  reward_queue_penalty_coef: 0.55 # Penalty for number of WAITING cloudlets (normalized)
+  reward_invalid_action_coef: 1.0 # Flat penalty for attempting an invalid action
+
+  # --- Observation Normalization ---
+  max_queue_norm: 100.0 # Expected max queue length for normalizing observation
+  max_pes_norm: 8.0 # Expected max PEs for normalizing next_cloudlet_pes obs (e.g., largest VM size)
+  # tree_array_max_len: 5000          # Optional: Manually set Tree Array padding size (if calculated value is unstable/undesired)
 
   # --- Technical Flags ---
-  clear_created_lists: true # Optimization: Clear broker internal lists (usually safe)
+  clear_created_lists: true # Optimization: Clear internal CloudSim broker lists
 
-  # --- Python/RL Parameters (Common Defaults) ---
-  mode: "train" # Default mode: "train", "transfer", "test"
-  algorithm: "MaskablePPO" # Default RL algorithm (Requires sb3_contrib) - Use PPO if not using masks initially
-  learning_rate: 0.0003 # Typical PPO learning rate
-  n_steps: 2048 # PPO steps per update
-  batch_size: 64 # PPO minibatch size
-  ent_coef: 0.0 # PPO entropy coefficient
-  gamma: 0.99 # Discount factor
-  seed: 42 # Default random seed
-  save_experiment: true # Whether to save logs/models
-  base_log_dir: "logs" # Root directory for logs
-  experiment_type_dir: "Hybrid_LBS" # Subdirectory for this type of experiment
-  train_model_dir: "" # Used in test/transfer mode: path to existing model dir relative to base_log_dir
+  # --- Python/RL Parameters ---
+  env_id: "LoadBalancingScaling-v0" # Gym environment ID to use
+  mode: "train" # Default execution mode: "train", "test"
+  algorithm: "PPO" # RL algorithm ("MaskablePPO", "PPO", "A2C", etc.)
+  policy: "MultiInputPolicy" # Network policy for Dict observation space
+  timesteps: 100000 # Total training timesteps
+  learning_rate: 0.0003 # Optimizer learning rate
+  n_steps: 2048 # (PPO/A2C) Steps per policy update
+  batch_size: 64 # (PPO/Others) Minibatch size for training
+  n_epochs: 10 # (PPO) Optimisation epochs per update
+  gamma: 0.99 # Discount factor for future rewards
+  gae_lambda: 0.95 # (PPO/A2C) Factor for Generalized Advantage Estimation
+  clip_range: 0.2 # (PPO) Clipping parameter
+  ent_coef: 0.01 # Entropy coefficient (exploration bonus)
+  vf_coef: 0.5 # Value function coefficient in loss
+  max_grad_norm: 0.5 # Max gradient norm for clipping
+  # policy_kwargs: # Optional: e.g., net_arch: [128, 128]
+  verbose: 0 # SB3 Verbosity level (0=minimal, 1=info, 2=debug)
+  log_interval: 1 # Log stats every N episodes
+  seed: 4567 # Default random seed for Python/Torch/Numpy/Env
+  save_experiment: true # Save logs, models, etc.
+  base_log_dir: "logs" # Root directory for all logs
+  experiment_type_dir: "DefaultType" # Subdirectory for this type of experiment (e.g., "SWF_Tests", "CSV_Tests")
+  train_model_dir: "" # REQUIRED FOR TEST/TRANSFER: Path to trained model log dir (relative to base_log_dir)
+  save_replay_buffer: false # Save replay buffer with best model (only for off-policy algos)
+  device: "auto" # Device for PyTorch ("auto", "cpu", "cuda")
 
-# --- Experiment-Specific Overrides ---
+# ===================================================================
+# Experiment-Specific Overrides (Define different runs below)
+# ===================================================================
 
 experiment_1:
-  simulation_name: "test1"
-  seed: 42
-
-  # Host (Server) Configuration
-  hosts_count: 8
-  host_pes: 16
-  host_pe_mips: 10000 # 10k MIPS per PE
-  host_ram: 65536 # 64 GB
-  host_bw: 50000 # 50 Gbps
-  host_storage: 100000 # 1 TB
-
-  # VM Configuration (Small Base m5.large)
-  small_vm_pes: 2
-  small_vm_ram: 8192 # 8 GB
-  small_vm_bw: 10000 # 10 Gbps
-  small_vm_storage: 4000 # 4 GB
-
-  # VM Size Multipliers
-  medium_vm_multiplier: 2 # -> 4 PEs
-  large_vm_multiplier: 4 # -> 8 PEs
-
-  # Initial VM Counts
-  initial_s_vm_count: 2
-  initial_m_vm_count: 1
-  initial_l_vm_count: 1
-
-  # Workload Configuration
-  workload_mode: CSV
-  cloudlet_trace_file: traces/hill_max30.csv
-  workload_reader_mips: 50000 # Should match Host MIPS usually
-
-  # Simulation Timing
-  simulation_timestep: 1.0 # RL step duration
-  min_time_between_events: 0.1
-  vm_startup_delay: 0.0
-  vm_shutdown_delay: 0.0
-
-  # Episode Control
-  max_episode_length: 10000 # Limit simulation steps for testing
-
-  # Reward Function Coefficients
-  reward_wait_time_coef: 0.1
-  reward_unutilization_coef: 0.85
-  reward_cost_coef: 0.5
-  reward_queue_penalty_coef: 0.05
-  reward_invalid_action_coef: 1.0
-
-  timesteps: 100000 # Total training steps for this experiment
-
-experiment_2:
-  simulation_name: "Exp2_MaskPPO_SWFShort_MoreUtilRew_10H_321Init_Seed123"
-  seed: 123
-  initial_s_vm_count: 3
-  initial_m_vm_count: 2
-  initial_l_vm_count: 1
-  timesteps: 100000
-  reward_unutilization_coef: 0.7 # Example: Higher weight on utilization
-  reward_cost_coef: 0.2
-  reward_queue_penalty_coef: 0.1
-# Add more experiment blocks (experiment_3, experiment_4, ...) as needed
-# Each can override any parameter from the 'common' section.
+  simulation_name: "Exp1_CSVSimple_Ent_0_01" # Unique name for logging this specific run
+  experiment_name: "Exp1_CSVSimple_Ent_0_01" # Name for the log sub-folder
+  experiment_type_dir: "CSV_Train"
+  workload_mode: "CSV"
+  cloudlet_trace_file: "traces/three_60max_8maxcores.csv"
+# Add experiment_2, experiment_3 etc. as needed
