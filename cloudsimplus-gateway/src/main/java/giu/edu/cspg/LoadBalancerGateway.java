@@ -33,6 +33,7 @@ public class LoadBalancerGateway {
 
     // To store reward components calculated in step for SimulationStepInfo
     private double rewardWaitTimeComponent = 0;
+    private double rewardThroughputComponent = 0;
     private double rewardUnutilizationComponent = 0;
     private double rewardCostComponent = 0;
     private double rewardQueuePenaltyComponent = 0;
@@ -262,6 +263,7 @@ public class LoadBalancerGateway {
                 hostAffectedId, coresChanged,
                 currentClock,
                 this.rewardWaitTimeComponent,
+                this.rewardThroughputComponent,
                 this.rewardUnutilizationComponent,
                 this.rewardCostComponent,
                 this.rewardQueuePenaltyComponent, this.rewardInvalidActionComponent,
@@ -289,7 +291,6 @@ public class LoadBalancerGateway {
             return 0.0;
 
         // --- Calculate Individual Components ---
-
         // 1. Wait Time Reward (Negative penalty for wait time of *finished* cloudlets
         // this step)
         List<Double> finishedWaitTimes = simulationCore.getBroker()
@@ -298,7 +299,12 @@ public class LoadBalancerGateway {
                 : finishedWaitTimes.parallelStream().mapToDouble(d -> d).average().orElse(0.0);
         this.rewardWaitTimeComponent = -settings.getRewardWaitTimeCoef() * avgWaitTime;
 
-        // 2. Unutilization Reward (Negative penalty for average CPU unutil of *running*
+        // 2. Cloudlet Throughput Reward (Positive reward for number of finished
+        // cloudlets)
+        int cloudletsFinishedThisStep = finishedWaitTimes.size();
+        this.rewardThroughputComponent = settings.getRewardThroughputCoef() * cloudletsFinishedThisStep;
+
+        // 3. Unutilization Reward (Negative penalty for average CPU unutil of *running*
         // VMs)
         List<Vm> runningVms = simulationCore.getVmPool();
         double avgUnutilization = 0;
@@ -311,14 +317,14 @@ public class LoadBalancerGateway {
         }
         this.rewardUnutilizationComponent = -settings.getRewardUnutilizationCoef() * avgUnutilization;
 
-        // 3. Cost Reward (Negative penalty for running more host cores)
+        // 4. Cost Reward (Negative penalty for running more host cores)
         this.rewardCostComponent = -settings.getRewardCostCoef()
                 * getHostCoresAllocatedToVmsRatio();
 
-        // 4. Queue Penalty (Negative penalty for number of waiting cloudlets)
+        // 5. Queue Penalty (Negative penalty for number of waiting cloudlets)
         this.rewardQueuePenaltyComponent = -settings.getRewardQueuePenaltyCoef() * getWaitingCloudletsRatio();
 
-        // 5. Invalid Action Reward (Negative penalty for invalid action taken)
+        // 6. Invalid Action Reward (Negative penalty for invalid action taken)
         this.rewardInvalidActionComponent = -settings.getRewardInvalidActionCoef() * (wasInvalidAction ? 1.0 : 0.0);
 
         // --- Total Reward ---
@@ -328,8 +334,9 @@ public class LoadBalancerGateway {
                 this.rewardQueuePenaltyComponent +
                 this.rewardInvalidActionComponent;
 
-        LOGGER.debug("Reward Calc: Wait={}, Util={}, Cost={}, Queue={}, Invalid={}, Total={}",
+        LOGGER.debug("Reward Calc: Wait={}, Throuput={}, Util={}, Cost={}, Queue={}, Invalid={}, Total={}",
                 this.rewardWaitTimeComponent,
+                this.rewardThroughputComponent,
                 this.rewardUnutilizationComponent,
                 this.rewardCostComponent,
                 this.rewardQueuePenaltyComponent, this.rewardInvalidActionComponent, totalReward);

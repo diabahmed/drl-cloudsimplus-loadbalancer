@@ -30,6 +30,7 @@ public class SimulationStepInfo {
 
     // Reward Components
     private final double rewardWaitTimeComponent;
+    private final double rewardThroughputComponent;
     private final double rewardUnutilizationComponent;
     private final double rewardCostComponent;
     private final double rewardQueuePenaltyComponent;
@@ -40,7 +41,8 @@ public class SimulationStepInfo {
     public SimulationStepInfo(boolean assignmentSuccess, boolean createVmAttempted, boolean createVmSuccess,
             boolean destroyVmAttempted, boolean destroyVmSuccess, boolean invalidActionTaken, int hostAffectedId,
             int coresChanged,
-            double currentClock, double rewardWaitTimeComponent, double rewardUnutilizationComponent,
+            double currentClock, double rewardWaitTimeComponent, double rewardThroughputComponent,
+            double rewardUnutilizationComponent,
             double rewardCostComponent, double rewardQueuePenaltyComponent, double rewardInvalidActionComponent,
             int[] observationTreeArray, List<Double> completedCloudletWaitTimes) {
         this.assignmentSuccess = assignmentSuccess;
@@ -53,6 +55,7 @@ public class SimulationStepInfo {
         this.coresChanged = coresChanged;
         this.currentClock = currentClock;
         this.rewardWaitTimeComponent = rewardWaitTimeComponent;
+        this.rewardThroughputComponent = rewardThroughputComponent;
         this.rewardUnutilizationComponent = rewardUnutilizationComponent;
         this.rewardCostComponent = rewardCostComponent;
         this.rewardQueuePenaltyComponent = rewardQueuePenaltyComponent;
@@ -64,7 +67,7 @@ public class SimulationStepInfo {
     // Simplified constructor for SimulationResetResult where action outcomes aren't
     // relevant
     public SimulationStepInfo(double currentClock) {
-        this(false, false, false, false, false, false, -1, 0, currentClock, 0, 0, 0, 0, 0, new int[1],
+        this(false, false, false, false, false, false, -1, 0, currentClock, 0, 0, 0, 0, 0, 0, new int[1],
                 new ArrayList<>());
     }
 
@@ -107,6 +110,10 @@ public class SimulationStepInfo {
 
     public double getRewardWaitTimeComponent() {
         return rewardWaitTimeComponent;
+    }
+
+    public double getRewardThroughputComponent() {
+        return rewardThroughputComponent;
     }
 
     public double getRewardUntilizationComponent() {

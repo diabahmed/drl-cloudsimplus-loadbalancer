@@ -62,6 +62,7 @@ public class SimulationSettings {
 
     // Reward Weights
     private final double rewardWaitTimeCoef;
+    private final double rewardThroughputCoef;
     private final double rewardUnutilizationCoef;
     private final double rewardCostCoef;
     private final double rewardQueuePenaltyCoef;
@@ -135,6 +136,7 @@ public class SimulationSettings {
 
         // Reward Weights
         this.rewardWaitTimeCoef = getDoubleParam(params, "reward_wait_time_coef", 0.1);
+        this.rewardThroughputCoef = getDoubleParam(params, "reward_throughput_coef", 0.1);
         this.rewardUnutilizationCoef = getDoubleParam(params, "reward_unutilization_coef", 0.85);
         this.rewardCostCoef = getDoubleParam(params, "reward_cost_coef", 0.5);
         this.rewardQueuePenaltyCoef = getDoubleParam(params, "reward_queue_penalty_coef", 0.05);
@@ -175,6 +177,7 @@ public class SimulationSettings {
                 "payingForTheFullHour=" + payingForTheFullHour + ",\n" +
                 "maxEpisodeLength=" + maxEpisodeLength + ",\n" +
                 "rewardWaitTimeCoef=" + rewardWaitTimeCoef + ",\n" +
+                "rewardThroughputCoef=" + rewardThroughputCoef + ",\n" +
                 "rewardUnutilizationCoef=" + rewardUnutilizationCoef + ",\n" +
                 "rewardCostCoef=" + rewardCostCoef + ",\n" +
                 "rewardQueuePenaltyCoef=" + rewardQueuePenaltyCoef + ",\n" +
@@ -359,6 +362,10 @@ public class SimulationSettings {
 
     public double getRewardWaitTimeCoef() {
         return rewardWaitTimeCoef;
+    }
+
+    public double getRewardThroughputCoef() {
+        return rewardThroughputCoef;
     }
 
     public double getRewardUnutilizationCoef() {
