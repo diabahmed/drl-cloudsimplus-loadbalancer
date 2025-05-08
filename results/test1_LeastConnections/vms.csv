@@ -1,5 +1,0 @@
-ID,Type,Status,PEs CPU Cores,CPU Util %,Cost $
-0,S,IDLE,2,1.7,355.84
-1,S,IDLE,2,2.6,355.84
-2,M,IDLE,4,1.7,657.68
-3,L,IDLE,8,17.6,1261.36

@@ -1,4 +1,0 @@
-ID,Status,DC ID,Host ID,Host PEs CPU Cores,VM ID,VM PEs CPU Cores,CloudletLen MI,FinishedLen MI,CloudletPEs CPU Cores,ArrivalTime Seconds,SubmssionTime Seconds,StartWaitTime Seconds,StartTime Seconds,FinishTime Seconds,ExecTime Seconds,TotalWaitTime Seconds,CompletionTime Seconds,Cost $
-1443,SUCCESS,2,1,100010,1,20000,376000,376000,8000,0,1,0,1,9,8,1,9,5206.81
-1447,SUCCESS,2,0,100000,0,10000,280000,280000,8000,1,2,0,2,8,6,1,7,2971.80
-1454,SUCCESS,2,0,100000,0,10000,280000,280000,4000,3,4,4,8,13,6,5,11,2414.05
