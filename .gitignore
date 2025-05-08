@@ -122,4 +122,7 @@ nohup.out
 *.xml
 *.tex
 *.txt
-/results/*
+results/
+results/*
+rl-manager-legacy/
+rl-manager-legacy/*
