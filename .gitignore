@@ -122,3 +122,4 @@ nohup.out
 *.xml
 *.tex
 *.txt
+/results/*
