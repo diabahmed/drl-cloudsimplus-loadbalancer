@@ -4,7 +4,7 @@
 
   <!-- Current log (overwritten each run) -->
   <appender name="CURRENT_FILE" class="ch.qos.logback.core.FileAppender">
-    <file>logs/cspg.current.log</file>
+    <file>logs/cloudsimplus/cspg.current.log</file>
     <append>false</append>
     <encoder>
       <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
@@ -13,7 +13,7 @@
 
   <!-- Per-run log in minute-precision directory -->
   <appender name="RUN_FILE" class="ch.qos.logback.core.FileAppender">
-    <file>logs/${runTimestamp}/cspg.log</file>
+    <file>logs/cloudsimplus/${runTimestamp}/cspg.log</file>
     <append>false</append>
     <encoder>
       <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
