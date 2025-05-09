@@ -30,9 +30,7 @@ public class SimulationStepInfo {
 
     // Reward Components
     private final double rewardWaitTimeComponent;
-    private final double rewardThroughputComponent;
     private final double rewardUnutilizationComponent;
-    private final double rewardCostComponent;
     private final double rewardQueuePenaltyComponent;
     private final double rewardInvalidActionComponent;
     private final List<Double> completedCloudletWaitTimes;
@@ -41,9 +39,9 @@ public class SimulationStepInfo {
     public SimulationStepInfo(boolean assignmentSuccess, boolean createVmAttempted, boolean createVmSuccess,
             boolean destroyVmAttempted, boolean destroyVmSuccess, boolean invalidActionTaken, int hostAffectedId,
             int coresChanged,
-            double currentClock, double rewardWaitTimeComponent, double rewardThroughputComponent,
+            double currentClock, double rewardWaitTimeComponent,
             double rewardUnutilizationComponent,
-            double rewardCostComponent, double rewardQueuePenaltyComponent, double rewardInvalidActionComponent,
+            double rewardQueuePenaltyComponent, double rewardInvalidActionComponent,
             int[] observationTreeArray, List<Double> completedCloudletWaitTimes) {
         this.assignmentSuccess = assignmentSuccess;
         this.createVmAttempted = createVmAttempted;
@@ -55,9 +53,7 @@ public class SimulationStepInfo {
         this.coresChanged = coresChanged;
         this.currentClock = currentClock;
         this.rewardWaitTimeComponent = rewardWaitTimeComponent;
-        this.rewardThroughputComponent = rewardThroughputComponent;
         this.rewardUnutilizationComponent = rewardUnutilizationComponent;
-        this.rewardCostComponent = rewardCostComponent;
         this.rewardQueuePenaltyComponent = rewardQueuePenaltyComponent;
         this.rewardInvalidActionComponent = rewardInvalidActionComponent;
         this.observationTreeArray = observationTreeArray;
@@ -67,7 +63,7 @@ public class SimulationStepInfo {
     // Simplified constructor for SimulationResetResult where action outcomes aren't
     // relevant
     public SimulationStepInfo(double currentClock) {
-        this(false, false, false, false, false, false, -1, 0, currentClock, 0, 0, 0, 0, 0, 0, new int[1],
+        this(false, false, false, false, false, false, -1, 0, currentClock, 0, 0, 0, 0, new int[1],
                 new ArrayList<>());
     }
 
@@ -112,16 +108,8 @@ public class SimulationStepInfo {
         return rewardWaitTimeComponent;
     }
 
-    public double getRewardThroughputComponent() {
-        return rewardThroughputComponent;
-    }
-
     public double getRewardUntilizationComponent() {
         return rewardUnutilizationComponent;
-    }
-
-    public double getRewardCostComponent() {
-        return rewardCostComponent;
     }
 
     public double getRewardQueuePenaltyComponent() {
@@ -159,7 +147,6 @@ public class SimulationStepInfo {
         map.put("current_clock", this.currentClock);
         map.put("reward_wait_time", this.rewardWaitTimeComponent);
         map.put("reward_unutilization", this.rewardUnutilizationComponent);
-        map.put("reward_cost", this.rewardCostComponent);
         map.put("reward_queue_penalty", this.rewardQueuePenaltyComponent);
         map.put("reward_invalid_action", this.rewardInvalidActionComponent);
         return map;
@@ -179,7 +166,6 @@ public class SimulationStepInfo {
                 ", clock=" + currentClock +
                 ", rewardWaitTime=" + rewardWaitTimeComponent +
                 ", rewardUntilization=" + rewardUnutilizationComponent +
-                ", rewardCost=" + rewardCostComponent +
                 ", rewardQueuePenalty=" + rewardQueuePenaltyComponent +
                 ", rewardInvalidAction=" + rewardInvalidActionComponent +
                 '}';
