@@ -5,7 +5,6 @@ import torch
 import gymnasium as gym
 from gymnasium import spaces
 from sb3_contrib import MaskablePPO
-from sb3_contrib.common.wrappers import ActionMasker
 import stable_baselines3 as sb3
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
@@ -57,10 +56,10 @@ def train(params: dict):
         # Use info_keywords to log specific values from the info dict to progress.csv
         # Adjust keywords based on keys returned by SimulationStepInfo.toMap()
         info_keywords_to_log = (
-            "reward_wait_time", "reward_unutilization", "reward_cost",
+            "reward_wait_time", "reward_unutilization",
             "reward_queue_penalty", "reward_invalid_action",
-            "assignment_success", "create_vm_success", "destroy_vm_success",
-            "invalid_action_taken", "host_affected_id", "cores_changed",
+            "assignment_success",
+            "invalid_action_taken",
             "actual_vm_count", "current_clock"
         )
         env = Monitor(env, log_dir, info_keywords=info_keywords_to_log)
@@ -87,9 +86,9 @@ def train(params: dict):
     if params["algorithm"] == "A2C":
         device = "cpu"
         env = SubprocVecEnv([lambda: env], start_method="fork")
-    # Use the ActionMasker if using MaskablePPO
     if params["algorithm"] == "MaskablePPO":
-            env = ActionMasker(env, lambda: env.env_method("action_masks")[0])  # Wrap to enable masking
+            device = "cpu"
+            env = DummyVecEnv([lambda: env])
     else:
         env = DummyVecEnv([lambda: env])
         logger.info("Environment wrapped with DummyVecEnv.")
