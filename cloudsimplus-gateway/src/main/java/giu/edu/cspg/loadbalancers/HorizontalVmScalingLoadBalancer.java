@@ -42,7 +42,7 @@ import giu.edu.cspg.utils.WorkloadFileReader;
 public final class HorizontalVmScalingLoadBalancer {
     private static final Logger LOGGER = LoggerFactory.getLogger(HorizontalVmScalingLoadBalancer.class.getSimpleName());
     private static final String CONFIG_FILE = "config.yml"; // Or load from args/env var
-    private static final String EXPERIMENT_ID = "experiment_1"; // Or load from args/env var
+    private static final String EXPERIMENT_ID = "experiment_5"; // Or load from args/env var
 
     private final CloudSimPlus simulation;
     private final SimulationSettings settings;

@@ -18,7 +18,7 @@ import giu.edu.cspg.utils.SimulationResultUtils;
 public class RandomLoadBalancer {
     private static final Logger LOGGER = LoggerFactory.getLogger(RandomLoadBalancer.class.getSimpleName());
     private static final String CONFIG_FILE = "config.yml"; // Or load from args/env var
-    private static final String EXPERIMENT_ID = "experiment_1"; // Or load from args/env var
+    private static final String EXPERIMENT_ID = "experiment_2"; // Or load from args/env var
 
     public static void main(String[] args) {
         LOGGER.info("Starting RandomLoadBalancer Experiment...");
@@ -34,7 +34,6 @@ public class RandomLoadBalancer {
 
         // 2. Create Simulation Core (Handles setup based on settings)
         SimulationCore simulationCore = new SimulationCore(settings);
-        simulationCore.getSimulation().terminateAt(settings.getMaxEpisodeLength());
         LoadBalancingBroker broker = simulationCore.getBroker();
 
         long seed = params.containsKey("seed") ? ((Number) params.get("seed")).longValue() : 1;
@@ -43,7 +42,7 @@ public class RandomLoadBalancer {
         // 3. Main Simulation Loop (Mimicking Agent Interaction)
         LOGGER.info("Starting simulation loop...");
         int step = 0;
-        while (simulationCore.isRunning()) {
+        while (step < settings.getMaxEpisodeLength() && simulationCore.isRunning()) {
             step++;
             LOGGER.debug("--- Step {} (Clock: {}) ---", step, String.format("%.2f", simulationCore.getClock()));
 

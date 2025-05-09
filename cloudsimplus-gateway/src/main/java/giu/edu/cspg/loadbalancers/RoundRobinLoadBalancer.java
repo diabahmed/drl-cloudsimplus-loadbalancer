@@ -16,7 +16,7 @@ import giu.edu.cspg.utils.SimulationResultUtils;
 public class RoundRobinLoadBalancer {
     private static final Logger LOGGER = LoggerFactory.getLogger(RoundRobinLoadBalancer.class.getSimpleName());
     private static final String CONFIG_FILE = "config.yml"; // Or load from args/env var
-    private static final String EXPERIMENT_ID = "experiment_1"; // Or load from args/env var
+    private static final String EXPERIMENT_ID = "experiment_3"; // Or load from args/env var
 
     private int roundRobinVmIndex = -1; // Start before the first VM
 
@@ -38,13 +38,12 @@ public class RoundRobinLoadBalancer {
 
         // 2. Create Simulation Core
         SimulationCore simulationCore = new SimulationCore(settings);
-        simulationCore.getSimulation().terminateAt(settings.getMaxEpisodeLength());
         LoadBalancingBroker broker = simulationCore.getBroker();
 
         // 3. Main Simulation Loop
         LOGGER.info("Starting simulation loop...");
         int step = 0;
-        while (simulationCore.isRunning()) {
+        while (step < settings.getMaxEpisodeLength() && simulationCore.isRunning()) {
             step++;
             LOGGER.debug("--- Step {} (Clock: {}) ---", step, String.format("%.2f", simulationCore.getClock()));
 

@@ -18,7 +18,7 @@ import giu.edu.cspg.utils.SimulationResultUtils;
 public class LeastConnectionsLoadBalancer {
     private static final Logger LOGGER = LoggerFactory.getLogger(LeastConnectionsLoadBalancer.class.getSimpleName());
     private static final String CONFIG_FILE = "config.yml"; // Or load from args/env var
-    private static final String EXPERIMENT_ID = "experiment_1"; // Or load from args/env var
+    private static final String EXPERIMENT_ID = "experiment_4"; // Or load from args/env var
     private static int minConnections = Integer.MAX_VALUE;
 
     public static void main(String[] args) {
@@ -39,7 +39,6 @@ public class LeastConnectionsLoadBalancer {
 
         // 2. Create Simulation Core
         SimulationCore simulationCore = new SimulationCore(settings);
-        simulationCore.getSimulation().terminateAt(settings.getMaxEpisodeLength());
         LoadBalancingBroker broker = simulationCore.getBroker();
 
         long seed = params.containsKey("seed") ? ((Number) params.get("seed")).longValue() : 1;
@@ -48,7 +47,7 @@ public class LeastConnectionsLoadBalancer {
         // 3. Main Simulation Loop
         LOGGER.info("Starting simulation loop...");
         int step = 0;
-        while (simulationCore.isRunning()) {
+        while (step < settings.getMaxEpisodeLength() && simulationCore.isRunning()) {
             step++;
             LOGGER.debug("--- Step {} (Clock: {}) ---", step, String.format("%.2f", simulationCore.getClock()));
 
