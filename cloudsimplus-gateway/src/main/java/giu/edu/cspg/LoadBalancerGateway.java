@@ -33,9 +33,7 @@ public class LoadBalancerGateway {
 
     // To store reward components calculated in step for SimulationStepInfo
     private double rewardWaitTimeComponent = 0;
-    private double rewardThroughputComponent = 0;
     private double rewardUnutilizationComponent = 0;
-    private double rewardCostComponent = 0;
     private double rewardQueuePenaltyComponent = 0;
     private double rewardInvalidActionComponent = 0;
 
@@ -63,6 +61,10 @@ public class LoadBalancerGateway {
      * could hold.
      */
     private int calculateMaxPotentialVms(SimulationSettings settings) {
+        if (settings.getMaxVms() > 0) {
+            return settings.getMaxVms(); // Use fixed max if set
+        }
+
         if (settings.getHostsCount() <= 0 || settings.getHostPes() <= 0 || settings.getSmallVmPes() <= 0) {
             return 0; // Avoid division by zero
         }
@@ -117,6 +119,88 @@ public class LoadBalancerGateway {
 
         LOGGER.info("Reset complete. Initial State: {}", initialState);
         return new SimulationResetResult(initialState, initialInfo);
+    }
+
+    /**
+     * Executes one simulation step based on the agent's action list.
+     * Action format: [target_vm_id]
+     * 
+     * @param targetVmId the target VM ID for assigning the cloudlet.
+     * @return A StepResult object containing the new state, reward, done flags, and
+     *         info.
+     */
+    public SimulationStepResult step(int targetVmId) {
+        if (simulationCore == null || settings == null) {
+            throw new IllegalStateException("Simulation not initialized/configured. Call reset() first.");
+        }
+
+        currentStep++;
+        LOGGER.debug("Step {} starting. Target VM ID: {}", currentStep, targetVmId);
+
+        boolean assignSuccess = false;
+        boolean wasInvalidAction = false; // Flag if the action logic itself deems it invalid
+
+        // --- 1. Execute Action ---
+        if (targetVmId == -1) {
+            // Agent explicitly chose NoOp/NoAssign
+            LOGGER.trace("Action: No assignment requested (targetVmId = -1).");
+            if (simulationCore.getBroker().hasWaitingCloudlets()) {
+                LOGGER.warn("Agent chose NoAssign (-1) but cloudlets are waiting. Considered invalid action.");
+                wasInvalidAction = true; // Penalize choosing NoOp when work exists
+            }
+        } else {
+            // Assign Cloudlet
+            // Agent chose a specific VM ID (0 to N-1)
+            if (simulationCore.getBroker().hasWaitingCloudlets()) {
+                assignSuccess = simulationCore.getBroker().assignCloudletToVm(targetVmId);
+                if (!assignSuccess) {
+                    LOGGER.warn(
+                            "Assign Cloudlet to VM {} failed (VM likely invalid or full). Invalid action taken.",
+                            targetVmId);
+                    wasInvalidAction = true; // Treat failed assignment as invalid action
+                }
+            } else {
+                LOGGER.warn("Assign Cloudlet action taken, but queue is empty. Invalid action.");
+                wasInvalidAction = true; // Invalid action if queue is empty
+            }
+        }
+
+        // --- 2. Advance Simulation Time ---
+        simulationCore.runOneTimestep(); // Run one timestep (default: 1 second)
+        double currentClock = simulationCore.getClock();
+
+        // --- 3. Calculate Reward ---
+        double totalReward = calculateReward(wasInvalidAction); // Pass invalid flag
+
+        // --- 4. Get New State ---
+        ObservationState newState = getCurrentState();
+
+        // --- 5. Check Termination/Truncation ---
+        boolean terminated = !simulationCore.isRunning();
+        boolean truncated = !terminated && (currentStep >= settings.getMaxEpisodeLength());
+        if (truncated)
+            LOGGER.info("Episode truncated at step {}", currentStep);
+        if (terminated)
+            LOGGER.info("Episode terminated naturally at step {} (clock {})", currentStep, currentClock);
+
+        // --- 6. Create Info Object ---
+        SimulationStepInfo stepInfo = new SimulationStepInfo(
+                assignSuccess, false, false,
+                false, false, wasInvalidAction,
+                -1, 0,
+                currentClock,
+                this.rewardWaitTimeComponent,
+                this.rewardUnutilizationComponent,
+                this.rewardQueuePenaltyComponent, this.rewardInvalidActionComponent,
+                getInfrastructureObservation(),
+                simulationCore.getBroker()
+                        .getFinishedWaitTimesLastStep(simulationCore.getClock()));
+
+        LOGGER.debug("Step {} finished. Reward: {}, Term: {}, Trunc: {}, Info: {}", currentStep, totalReward,
+                terminated, truncated, stepInfo);
+
+        // --- 7. Return Result ---
+        return new SimulationStepResult(newState, totalReward, terminated, truncated, stepInfo);
     }
 
     /**
@@ -263,9 +347,7 @@ public class LoadBalancerGateway {
                 hostAffectedId, coresChanged,
                 currentClock,
                 this.rewardWaitTimeComponent,
-                this.rewardThroughputComponent,
                 this.rewardUnutilizationComponent,
-                this.rewardCostComponent,
                 this.rewardQueuePenaltyComponent, this.rewardInvalidActionComponent,
                 getInfrastructureObservation(),
                 simulationCore.getBroker()
@@ -290,68 +372,58 @@ public class LoadBalancerGateway {
         if (simulationCore == null || settings == null)
             return 0.0;
 
-        // --- Calculate Individual Components ---
-        // 1. Wait Time Reward (Negative penalty for wait time of *finished* cloudlets
-        // this step)
-        List<Double> finishedWaitTimes = simulationCore.getBroker()
-                .getFinishedWaitTimesLastStep(simulationCore.getClock());
-        double avgWaitTime = finishedWaitTimes.isEmpty() ? 0
-                : finishedWaitTimes.parallelStream().mapToDouble(d -> d).average().orElse(0.0);
-        this.rewardWaitTimeComponent = -settings.getRewardWaitTimeCoef() * avgWaitTime;
-
-        // 2. Cloudlet Throughput Reward (Positive reward for number of finished
-        // cloudlets)
-        int cloudletsFinishedThisStep = finishedWaitTimes.size();
-        this.rewardThroughputComponent = settings.getRewardThroughputCoef() * cloudletsFinishedThisStep;
-
-        // 3. Unutilization Reward (Negative penalty for average CPU unutil of *running*
-        // VMs)
+        LoadBalancingBroker broker = simulationCore.getBroker();
         List<Vm> runningVms = simulationCore.getVmPool();
-        double avgUnutilization = 0;
+
+        // --- Components ---
+
+        // 1. Wait Time Penalty (Avg wait of finished cloudlets)
+        List<Double> finishedWaitTimes = broker.getFinishedWaitTimesLastStep(simulationCore.getClock());
+        double avgFinishedWaitTime = finishedWaitTimes.isEmpty() ? 0
+                : finishedWaitTimes.stream().mapToDouble(d -> d).average().orElse(0.0);
+        // Scale wait time penalty - e.g., shorter waits are less penalized
+        this.rewardWaitTimeComponent = -settings.getRewardWaitTimeCoef() * Math.log1p(avgFinishedWaitTime);
+
+        // 2. Utilization & Balance Penalty (Penalize variance & deviation from target)
+        this.rewardUnutilizationComponent = 0;
         if (!runningVms.isEmpty()) {
-            avgUnutilization = runningVms.parallelStream()
-                    .filter(vm -> vm != null && vm.isCreated() && !vm.isFailed())
-                    .mapToDouble(vm -> 1 - vm.getCpuPercentUtilization())
-                    .average()
-                    .orElse(0.0);
+            final double avgUtilization = runningVms.stream()
+                    .mapToDouble(Vm::getCpuPercentUtilization)
+                    .average().orElse(0.0);
+
+            final double utilizationVariance = runningVms.stream()
+                    .mapToDouble(vm -> Math.pow(vm.getCpuPercentUtilization() - avgUtilization, 2))
+                    .average().orElse(0.0);
+
+            // Penalize deviation from a target utilization (e.g., 0.95) and variance
+            double targetUtil = 0.95;
+            double utilDeviationPenalty = Math.abs(avgUtilization - targetUtil);
+            // Combine penalties: variance + deviation from target. Use sqrt for variance.
+            this.rewardUnutilizationComponent = -settings.getRewardUnutilizationCoef()
+                    * (Math.sqrt(utilizationVariance) + utilDeviationPenalty);
         }
-        this.rewardUnutilizationComponent = -settings.getRewardUnutilizationCoef() * avgUnutilization;
 
-        // 4. Cost Reward (Negative penalty for running more host cores)
-        this.rewardCostComponent = -settings.getRewardCostCoef()
-                * getHostCoresAllocatedToVmsRatio();
-
-        // 5. Queue Penalty (Negative penalty for number of waiting cloudlets)
+        // 3. Queue Length Penalty (Ratio relative to arrived)
         this.rewardQueuePenaltyComponent = -settings.getRewardQueuePenaltyCoef() * getWaitingCloudletsRatio();
 
-        // 6. Invalid Action Reward (Negative penalty for invalid action taken)
+        // 4. Invalid Action Penalty
         this.rewardInvalidActionComponent = -settings.getRewardInvalidActionCoef() * (wasInvalidAction ? 1.0 : 0.0);
 
         // --- Total Reward ---
+        // Note: No direct positive reward, agent optimizes by *minimizing penalties*.
         double totalReward = this.rewardWaitTimeComponent +
                 this.rewardUnutilizationComponent +
-                this.rewardCostComponent +
                 this.rewardQueuePenaltyComponent +
                 this.rewardInvalidActionComponent;
 
-        LOGGER.debug("Reward Calc: Wait={}, Throuput={}, Util={}, Cost={}, Queue={}, Invalid={}, Total={}",
-                this.rewardWaitTimeComponent,
-                this.rewardThroughputComponent,
-                this.rewardUnutilizationComponent,
-                this.rewardCostComponent,
-                this.rewardQueuePenaltyComponent, this.rewardInvalidActionComponent, totalReward);
+        LOGGER.debug("Reward Calc LB: Wait={}, UtilBal={}, Queue={}, Invalid={}, Total={}",
+                String.format("%.3f", this.rewardWaitTimeComponent),
+                String.format("%.3f", this.rewardUnutilizationComponent),
+                String.format("%.3f", this.rewardQueuePenaltyComponent),
+                String.format("%.3f", this.rewardInvalidActionComponent),
+                String.format("%.3f", totalReward));
 
         return totalReward;
-    }
-
-    /**
-     * Calculates the ratio of allocated cores to total host cores.
-     * Used for cost reward calculation.
-     * 
-     * @return The ratio of allocated cores to total host cores.
-     */
-    private double getHostCoresAllocatedToVmsRatio() {
-        return ((double) simulationCore.getAllocatedCores()) / simulationCore.getTotalHostCores();
     }
 
     /**
@@ -382,7 +454,7 @@ public class LoadBalancerGateway {
             return new ObservationState(
                     new double[maxHosts], new double[maxHosts],
                     new double[maxVms], new int[maxVms], new int[maxVms], getInfrastructureObservation(),
-                    0, 0, 0, 0);
+                    0, 0, new int[maxVms], 0, 0);
         }
 
         // Initialize padded arrays
@@ -391,6 +463,7 @@ public class LoadBalancerGateway {
         double[] hostRamUsageRatio = new double[numHosts];
 
         double[] vmLoads = new double[maxPotentialVms]; // Padded (0=off)
+        int[] vmAvailablePes = new int[maxPotentialVms]; // Initialize with 0
         int[] vmTypes = new int[maxPotentialVms]; // Padded (0=off)
         int[] vmHostMap = new int[maxPotentialVms]; // Padded (-1=off)
         Arrays.fill(vmHostMap, -1); // Default to -1
@@ -423,6 +496,7 @@ public class LoadBalancerGateway {
                 // Ensure vmId is within the bounds of our observation arrays
                 if (vmId >= 0 && vmId < maxPotentialVms) {
                     vmLoads[vmId] = vm.getCpuPercentUtilization();
+                    vmAvailablePes[vmId] = (int) vm.getPesNumber();
                     vmTypes[vmId] = vmTypeStringToIndex(vm.getDescription());
                     vmHostMap[vmId] = (int) vm.getHost().getId(); // Store host ID
                     actualVmCount++;
@@ -444,7 +518,7 @@ public class LoadBalancerGateway {
 
         return new ObservationState(
                 hostLoads, hostRamUsageRatio, vmLoads, vmTypes, vmHostMap, getInfrastructureObservation(),
-                waitingCloudlets, nextCloudletPes, actualVmCount, numHosts);
+                waitingCloudlets, nextCloudletPes, vmAvailablePes, actualVmCount, numHosts);
     }
 
     /** Helper to convert VM type string (S, M, L) to integer index (1, 2, 3). */
