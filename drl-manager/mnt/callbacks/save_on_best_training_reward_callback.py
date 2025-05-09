@@ -42,19 +42,13 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         # self.observations = [] # Optional: Store observations? Can be large.
         self.actions = []
         self.rewards = [] # Total reward per step
-        self.new_observations = [] # Optional: Store next observations?
         # Specific components from StepInfo
         self.reward_wait_times = []
         self.reward_unutilizations = []
-        self.reward_costs = []
         self.reward_queue_penalties = []
         self.reward_invalid_actions = []
         self.assignment_successes = []
-        self.create_vm_successes = []
-        self.destroy_vm_successes = []
         self.invalid_actions_taken = []
-        self.host_affected_ids = []
-        self.cores_changed = []
         self.actual_vm_counts = []
         self.current_clocks = []
         self.current_episode_length = 0
@@ -75,15 +69,10 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         # Extract metrics from info dict (use .get() with defaults)
         self.reward_wait_times.append(info.get("reward_wait_time", 0.0))
         self.reward_unutilizations.append(info.get("reward_unutilization", 0.0))
-        self.reward_costs.append(info.get("reward_cost", 0.0))
         self.reward_queue_penalties.append(info.get("reward_queue_penalty", 0.0))
         self.reward_invalid_actions.append(info.get("reward_invalid_action", 0.0))
         self.assignment_successes.append(info.get("assignment_success", False))
-        self.create_vm_successes.append(info.get("create_vm_success", False))
-        self.destroy_vm_successes.append(info.get("destroy_vm_success", False))
         self.invalid_actions_taken.append(info.get("invalid_action_taken", False))
-        self.host_affected_ids.append(info.get("host_affected_id", -1))
-        self.cores_changed.append(info.get("cores_changed", 0))
         self.actual_vm_counts.append(info.get("actual_vm_count", 0))
         self.current_clocks.append(info.get("current_clock", 0.0))
 
@@ -100,25 +89,15 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
         details = {
             "timestep": timesteps,
             "clock": self.current_clocks,
-            "action_type": [a[0] for a in self.actions],
-            "target_vm_id": [a[1] for a in self.actions],
-            "target_host_id": [a[2] for a in self.actions],
-            "vm_type_index": [a[3] for a in self.actions],
+            "target_vm_id": self.actions,
             "reward_total": self.rewards,
             "reward_wait_time": self.reward_wait_times,
             "reward_unutilization": self.reward_unutilizations,
-            "reward_cost": self.reward_costs,
             "reward_queue_penalty": self.reward_queue_penalties,
             "reward_invalid_action": self.reward_invalid_actions,
             "assignment_success": self.assignment_successes,
-            "create_vm_success": self.create_vm_successes,
-            "destroy_vm_success": self.destroy_vm_successes,
             "invalid_action_taken": self.invalid_actions_taken,
-            "host_affected_id": self.host_affected_ids,
-            "cores_changed": self.cores_changed,
             "actual_vm_count": self.actual_vm_counts,
-            # Optional: Add observations if collected
-            # "observation": self.observations,
         }
         # Ensure all lists have the same length (robustness)
         expected_len = self.current_episode_length
