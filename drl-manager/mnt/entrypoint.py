@@ -38,11 +38,6 @@ def set_seed_globally(seed):
         if torch.cuda.is_available():
             torch.cuda.manual_seed(seed)
             torch.cuda.manual_seed_all(seed)  # for multi-GPU.
-            # Potentially enable deterministic algorithms for reproducibility
-            # Note: This can impact performance and might not work with all ops
-            # torch.backends.cudnn.deterministic = True
-            # torch.backends.cudnn.benchmark = False
-            # torch.use_deterministic_algorithms(True)
         os.environ['PYTHONHASHSEED'] = str(seed)
         logger.info(f"Global random seeds set to: {seed}")
     except Exception as e:
