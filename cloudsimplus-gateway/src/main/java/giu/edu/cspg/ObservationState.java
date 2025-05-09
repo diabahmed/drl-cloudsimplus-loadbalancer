@@ -20,6 +20,7 @@ public class ObservationState {
     // Scalar values
     private final int waitingCloudlets; // Number of cloudlets in broker queue
     private final int nextCloudletPes; // PEs required by the next waiting cloudlet (0 if none)
+    private final int[] vmAvailablePes; // Available PEs on each VM (size num_vms, 0 if VM off/non-existent)
     private final int actualVmCount; // Actual number of currently running VMs (for potential use in Python)
     private final int actualHostCount; // Actual number of hosts (usually fixed, but good practice)
 
@@ -40,7 +41,7 @@ public class ObservationState {
      */
     public ObservationState(double[] hostLoads, double[] hostRamUsageRatio, double[] vmLoads, int[] vmTypes,
             int[] vmHostMap, int[] infrastructureObservation,
-            int waitingCloudlets, int nextCloudletPes, int actualVmCount, int actualHostCount) {
+            int waitingCloudlets, int nextCloudletPes, int[] vmAvailablePes, int actualVmCount, int actualHostCount) {
         // Use defensive copies for arrays
         this.hostLoads = Arrays.copyOf(hostLoads, hostLoads.length);
         this.hostRamUsageRatio = Arrays.copyOf(hostRamUsageRatio, hostRamUsageRatio.length);
@@ -51,6 +52,7 @@ public class ObservationState {
 
         this.waitingCloudlets = waitingCloudlets;
         this.nextCloudletPes = nextCloudletPes;
+        this.vmAvailablePes = Arrays.copyOf(vmAvailablePes, vmAvailablePes.length);
         this.actualVmCount = actualVmCount;
         this.actualHostCount = actualHostCount;
     }
@@ -85,6 +87,10 @@ public class ObservationState {
         return nextCloudletPes;
     }
 
+    public int[] getVmAvailablePes() {
+        return Arrays.copyOf(vmAvailablePes, vmAvailablePes.length);
+    }
+
     public int getActualVmCount() {
         return actualVmCount;
     }
@@ -106,6 +112,7 @@ public class ObservationState {
                 ", nextCloudletPes=" + nextCloudletPes +
                 ", hostLoads=" + Arrays.toString(Arrays.copyOf(hostLoads, actualHostCount)) + // Show only actual hosts
                 ", vmLoads=" + Arrays.toString(Arrays.copyOf(vmLoads, actualVmCount)) + // Show only actual VMs
+                ", vmAvailablePes=" + Arrays.toString(vmAvailablePes) +
                 ", vmTypes=" + Arrays.toString(Arrays.copyOf(vmTypes, actualVmCount)) + // Show only actual VMs
                 ", vmHostMap=" + Arrays.toString(Arrays.copyOf(vmHostMap, actualVmCount)) + // Show only actual VMs
                 ", hostRamUsageRatio=" + Arrays.toString(Arrays.copyOf(hostRamUsageRatio, actualHostCount)) +
