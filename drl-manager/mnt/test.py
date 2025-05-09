@@ -11,6 +11,7 @@ from stable_baselines3.common.monitor import Monitor
 try:
     import gym_cloudsimplus # noqa: F401
     from sb3_contrib import MaskablePPO
+    from sb3_contrib.common.maskable.utils import get_action_masks
     from stable_baselines3 import PPO, A2C, DQN, SAC, TD3
 except ImportError:
     print("Error: Could not import necessary modules. Ensure utils and env are available.")
@@ -50,7 +51,6 @@ def test(params: dict):
         logger.info(f"Creating Gym environment: {env_id}")
         # No Monitor needed here unless we want to log evaluation episodes specifically
         env = gym.make(env_id, config_params=params)
-        env = DummyVecEnv([lambda: env]) # Still needs to be vectorized for SB3 load/predict
         logger.info("Evaluation environment created successfully.")
     except Exception as e:
         logger.error(f"Failed to create Gym environment '{env_id}': {e}", exc_info=True)
@@ -88,7 +88,7 @@ def test(params: dict):
         env.close(); return
 
     # --- Evaluation Loop ---
-    num_eval_episodes = params.get("num_eval_episodes", 10)
+    num_eval_episodes = params.get("num_eval_episodes", 5)
     logger.info(f"Running evaluation for {num_eval_episodes} episodes...")
 
     # Store results per episode
@@ -108,22 +108,14 @@ def test(params: dict):
         while not (terminated or truncated):
             # Use deterministic=True for consistent evaluation actions
             # Pass action masks if using MaskablePPO
-            action_masks_list = None
-            predict_kwargs = {"deterministic": True}
             if algorithm_name == "MaskablePPO":
-                 action_masks_list = env.env_method("action_masks")[0] # Get mask from underlying env
-                 predict_kwargs["action_masks"] = np.array([action_masks_list]) # Vectorize mask
+                 action_masks = get_action_masks(env)
 
-            action, _ = model.predict(current_obs, **predict_kwargs)
+            action, _ = model.predict(current_obs, deterministic=True, action_masks=action_masks)
 
-            current_obs, reward, terminated_arr, truncated_arr, infos_arr = env.step(action)
+            current_obs, reward, terminated, truncated, info = env.step(action)
 
-            # Extract results from VecEnv wrappers
-            terminated = terminated_arr[0]
-            truncated = truncated_arr[0]
-            info = infos_arr[0]
-
-            ep_reward += reward[0]
+            ep_reward += reward
             ep_len += 1
             ep_infos.append(info.copy()) # Store a copy of the info dict
 
