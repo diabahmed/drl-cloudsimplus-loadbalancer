@@ -40,6 +40,7 @@ public class SimulationSettings {
     private final int initialMVmCount;
     private final int initialLVmCount;
     private final int[] initialVmCounts;
+    private final int maxVms;
 
     private final String workloadMode; // "SWF" or "CSV"
     private final String cloudletTraceFile; // Path for trace file
@@ -66,6 +67,7 @@ public class SimulationSettings {
     private final double rewardUnutilizationCoef;
     private final double rewardCostCoef;
     private final double rewardQueuePenaltyCoef;
+    private final double rewardAssignmentCoef;
     private final double rewardInvalidActionCoef;
 
     /**
@@ -102,6 +104,7 @@ public class SimulationSettings {
         this.initialMVmCount = getIntParam(params, "initial_m_vm_count", 1);
         this.initialLVmCount = getIntParam(params, "initial_l_vm_count", 1);
         this.initialVmCounts = new int[] { this.initialSVmCount, this.initialMVmCount, this.initialLVmCount };
+        this.maxVms = this.initialSVmCount + this.initialMVmCount + this.initialLVmCount;
 
         // Workload Configuration
         this.workloadMode = getStringParam(params, "workload_mode", "SWF");
@@ -140,6 +143,7 @@ public class SimulationSettings {
         this.rewardUnutilizationCoef = getDoubleParam(params, "reward_unutilization_coef", 0.85);
         this.rewardCostCoef = getDoubleParam(params, "reward_cost_coef", 0.5);
         this.rewardQueuePenaltyCoef = getDoubleParam(params, "reward_queue_penalty_coef", 0.05);
+        this.rewardAssignmentCoef = getDoubleParam(params, "reward_assignment_coef", 0.05);
         this.rewardInvalidActionCoef = getDoubleParam(params, "reward_invalid_action_coef", 1.0);
 
         LOGGER.info("SimulationSettings loaded successfully.");
@@ -163,6 +167,7 @@ public class SimulationSettings {
                 "initialSVmCount=" + initialSVmCount + ",\n" +
                 "initialMVmCount=" + initialMVmCount + ",\n" +
                 "initialLVmCount=" + initialLVmCount + ",\n" +
+                "maxVms=" + maxVms + ",\n" +
                 "workloadMode='" + workloadMode + '\'' + ",\n" +
                 "cloudletTraceFile='" + cloudletTraceFile + '\'' + ",\n" +
                 "maxCloudletsToCreateFromWorkloadFile=" + maxCloudletsToCreateFromWorkloadFile + ",\n" +
@@ -181,6 +186,7 @@ public class SimulationSettings {
                 "rewardUnutilizationCoef=" + rewardUnutilizationCoef + ",\n" +
                 "rewardCostCoef=" + rewardCostCoef + ",\n" +
                 "rewardQueuePenaltyCoef=" + rewardQueuePenaltyCoef + ",\n" +
+                "rewardAssignmentCoef=" + rewardAssignmentCoef + ",\n" +
                 "rewardInvalidActionCoef=" + rewardInvalidActionCoef + "\n" +
                 "}";
     }
@@ -390,6 +396,10 @@ public class SimulationSettings {
 
     public long getTotalHostCores() {
         return hostsCount * hostPes;
+    }
+
+    public int getMaxVms() {
+        return maxVms;
     }
 
     /**
