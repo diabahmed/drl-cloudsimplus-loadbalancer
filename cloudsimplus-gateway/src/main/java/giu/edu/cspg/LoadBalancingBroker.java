@@ -30,6 +30,7 @@ public class LoadBalancingBroker extends DatacenterBrokerSimple {
     private final PriorityQueue<Cloudlet> cloudletsQueue; // cloudlets to be submitted - sorted by arrival time
     private final Map<Long, Double> cloudletArrivalTimeMap; // map to keep track of arrival times
     private final List<Double> cloudletsFinishedWaitTimeLastTimestep = new ArrayList<>();
+    private final List<Cloudlet> cloudletsFinishedLastTimestep = new ArrayList<>();
 
     public LoadBalancingBroker(CloudSimPlus simulation, List<Cloudlet> inputCloudlets) {
         super(simulation);
@@ -95,6 +96,7 @@ public class LoadBalancingBroker extends DatacenterBrokerSimple {
                         cloudlet.getVm().getCloudletScheduler().getCloudletExecList().size(),
                         cloudlet.getVm().getHost(), cloudlet.getVm().getHost().getVmList().size(),
                         getSimulation().clockStr(), String.format("%.2f", cloudlet.getTotalExecutionTime()));
+                cloudletsFinishedLastTimestep.add(cloudlet);
                 final double waitTime = Math
                         .ceil(cloudlet.getStartTime() - cloudletArrivalTimeMap.get(cloudlet.getId()));
                 cloudletsFinishedWaitTimeLastTimestep.add(waitTime);
@@ -351,6 +353,17 @@ public class LoadBalancingBroker extends DatacenterBrokerSimple {
     }
 
     /**
+     * Gets the list of cloudlets that finished execution since the last time this
+     * method was called.
+     *
+     * @return A list containing the Cloudlet objects that finished in the last
+     *         simulation interval.
+     */
+    public List<Cloudlet> getCloudletsFinishedLastStep(double currentClock) {
+        return cloudletsFinishedLastTimestep;
+    }
+
+    /**
      * Gets the arrival time map for cloudlets. This map contains the submission
      * delay
      * for each cloudlet, which is used to determine when the cloudlet should be
@@ -387,6 +400,7 @@ public class LoadBalancingBroker extends DatacenterBrokerSimple {
 
     /** Clears the list of finished wait times. Called during reset. */
     public void clearFinishedWaitTimes() {
+        cloudletsFinishedLastTimestep.clear();
         cloudletsFinishedWaitTimeLastTimestep.clear();
     }
 }
