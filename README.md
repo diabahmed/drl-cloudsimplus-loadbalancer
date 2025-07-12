@@ -1,4 +1,4 @@
-# RL CloudSim Load Balancer
+# DRL CloudSim Load Balancer
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Java](https://img.shields.io/badge/Java-11+-orange.svg)](https://www.oracle.com/java/)
@@ -147,14 +147,6 @@ rl-cloudsim-loadbalancer/
 
 ## 🚀 Quick Start
 
-### ⚡ One-Command Setup
-
-```bash
-# Clone and setup everything
-git clone https://github.com/diabahmed/rl-cloudsim-loadbalancer.git
-cd rl-cloudsim-loadbalancer && ./setup.sh
-```
-
 ### 📋 Prerequisites
 
 | Requirement | Version | Installation                                       |
@@ -163,18 +155,6 @@ cd rl-cloudsim-loadbalancer && ./setup.sh
 | **Python**  | 3.12+   | [Python.org](https://python.org/)                  |
 | **Gradle**  | 8.0+    | [Gradle.org](https://gradle.org/) (or use wrapper) |
 | **Git**     | Latest  | [Git-SCM](https://git-scm.com/)                    |
-
-### 🐳 Docker Quickstart (Recommended)
-
-```bash
-# Run complete environment with Docker
-git clone https://github.com/diabahmed/rl-cloudsim-loadbalancer.git
-cd rl-cloudsim-loadbalancer
-docker-compose up --build
-
-# Access Jupyter analysis at: http://localhost:8888
-# Gateway runs on: localhost:25333
-```
 
 ### 🔧 Manual Installation
 
@@ -231,26 +211,6 @@ python gateway_test.py
 cd drl-manager/mnt
 python train.py --timesteps 1000
 # Quick training run (~5 minutes)
-```
-
-### 🎯 Quick Demo
-
-Run a complete experiment comparing DRL vs traditional algorithms:
-
-```bash
-# 1. Train DRL agent
-cd drl-manager/mnt
-python train.py --config ../config.yml --timesteps 50000
-
-# 2. Run traditional algorithms (in parallel terminals)
-cd ../../cloudsimplus-gateway
-./gradlew run -Pargs="random"
-./gradlew run -Pargs="roundrobin"
-./gradlew run -Pargs="leastconnections"
-
-# 3. Analyze results
-cd ../data-analysis
-jupyter notebook analysis.ipynb
 ```
 
 Expected results: DRL achieves **18% lower completion time** and **15% cost reduction** compared to traditional methods.
@@ -796,34 +756,6 @@ evaluation_protocol = {
 }
 ```
 
-#### Related Publications
-
-- **Conference Papers**: 3 submitted, 1 accepted
-- **Journal Articles**: 2 under review
-- **Workshop Papers**: 5 published
-- **Technical Reports**: Available on arXiv
-
-### 🤝 Research Collaboration
-
-#### Academic Partnerships
-
-- **GUC Research Group** - Primary development
-- **International Collaborators** - Algorithm validation
-- **Industry Partners** - Real-world trace datasets
-
-#### Open Research Data
-
-```bash
-# Access research datasets
-wget https://github.com/diabahmed/rl-cloudsim-datasets/releases/latest/download/research_data.tar.gz
-
-# Includes:
-# - Real cloud traces from industry partners
-# - Synthetic workload generators
-# - Baseline algorithm implementations
-# - Evaluation benchmarks
-```
-
 ### 🎯 Future Research Directions
 
 #### Immediate Extensions (3-6 months)
@@ -884,28 +816,6 @@ research_plots.performance_comparison(
     include_confidence_intervals=True
 )
 ```
-
-### 🏅 Awards & Recognition
-
-- **Best Paper Award** - CloudSys 2024 Workshop
-- **Outstanding Research** - ACM Student Research Competition
-- **Open Source Excellence** - GitHub Education Recognition
-
-### 🌍 Community Impact
-
-#### Download Statistics
-
-- **GitHub Stars**: 150+ (growing rapidly)
-- **Paper Citations**: 25+ (since publication)
-- **Active Users**: 50+ research groups worldwide
-- **Forks**: 75+ (active development)
-
-#### User Community
-
-- **Academic Institutions**: 25+ universities using the framework
-- **Industry Adoption**: 5+ companies exploring deployment
-- **Geographic Reach**: 15+ countries represented
-- **Active Contributors**: 10+ regular contributors
 
 ## 🛠️ Development & Extension
 
@@ -1415,13 +1325,6 @@ Contributors will be acknowledged in:
 - **Release notes** and changelogs
 - **Conference presentations**
 
-### 📞 Getting Help
-
-- **Discord Community**: [Join our server](https://discord.gg/rl-cloudsim) for real-time discussions
-- **GitHub Discussions**: For design questions and feature proposals
-- **Issue Tracker**: For bug reports and enhancement requests
-- **Email**: research-team@rl-cloudsim.org for private inquiries
-
 ---
 
 ## 📄 License
@@ -1451,36 +1354,16 @@ This project is licensed under the **GNU General Public License v3.0** - see the
 
 ### Research Community
 
-- **German University in Cairo (GUC)** - Primary research institution
 - **CloudSim Plus Team** - Technical guidance and support
 - **OpenAI Gymnasium Team** - Environment standardization
 - **Stable Baselines3 Contributors** - Algorithm implementations
 
-### Industry Partners
-
-- **Cloud providers** - Real workload traces and validation
-- **Technology companies** - Performance benchmarking
-- **Research institutions** - Collaborative studies
 
 ### Individual Contributors
 
 #### Lead Developer
 
-- **[Diab Ahmed](https://github.com/diabahmed)** - Project founder and maintainer
-
-#### Core Contributors
-
-- **[Contributor Name]** - Algorithm development
-- **[Contributor Name]** - Performance optimization
-- **[Contributor Name]** - Documentation and testing
-
-#### Community Contributors
-
-Thanks to all our community contributors! 🌟
-
-<a href="https://github.com/diabahmed/rl-cloudsim-loadbalancer/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=diabahmed/rl-cloudsim-loadbalancer" />
-</a>
+- **[Ahmed Diab](https://github.com/diabahmed)** - Project founder and maintainer
 
 ### Special Thanks
 
@@ -1488,42 +1371,6 @@ Thanks to all our community contributors! 🌟
 - **Beta testers** for valuable feedback and bug reports
 - **Conference reviewers** for constructive criticism
 - **Open source community** for tools and inspiration
-
----
-
-## 📞 Support & Contact
-
-### 🆘 Getting Help
-
-| Issue Type                 | Channel                                                                                 | Response Time |
-| -------------------------- | --------------------------------------------------------------------------------------- | ------------- |
-| **Bug Reports**            | [GitHub Issues](https://github.com/diabahmed/rl-cloudsim-loadbalancer/issues)           | 24-48 hours   |
-| **Feature Requests**       | [GitHub Discussions](https://github.com/diabahmed/rl-cloudsim-loadbalancer/discussions) | 1-2 weeks     |
-| **Usage Questions**        | [Discord Community](https://discord.gg/rl-cloudsim)                                     | Real-time     |
-| **Research Collaboration** | research-team@rl-cloudsim.org                                                           | 3-5 days      |
-| **Commercial Inquiries**   | business@rl-cloudsim.org                                                                | 1 week        |
-
-### 📚 Resources
-
-- **📖 Documentation**: [Wiki](https://github.com/diabahmed/rl-cloudsim-loadbalancer/wiki)
-- **🎓 Tutorials**: [Getting Started Guide](docs/tutorials/)
-- **📊 Examples**: [Example Repository](examples/)
-- **📈 Benchmarks**: [Performance Database](benchmarks/)
-- **🔬 Research Papers**: [Publications List](docs/publications.md)
-
-### 🌐 Connect With Us
-
-- **🐦 Twitter**: [@RLCloudSim](https://twitter.com/rlcloudsim)
-- **💼 LinkedIn**: [RL CloudSim Research Group](https://linkedin.com/company/rl-cloudsim)
-- **📺 YouTube**: [Tutorial Videos](https://youtube.com/c/rlcloudsim)
-- **📧 Newsletter**: [Subscribe for updates](https://rl-cloudsim.org/newsletter)
-
-### 🏛️ Institutional Affiliation
-
-**German University in Cairo (GUC)**  
-Faculty of Computer Science  
-Cloud Computing Research Lab  
-New Cairo, Egypt
 
 ---
 
